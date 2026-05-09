@@ -1,0 +1,12 @@
+body {
+  margin: 0;
+  font-family: Inter;
+  box-sizing: border-box;
+  font-size: 14px;
+  font-weight: 400;
+  color: #1e2633;
+}
+:root {
+  --primary-color: #2970f6;
+  --sidebar-width: 250px;
+}

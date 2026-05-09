@@ -1,0 +1,195 @@
+<template>
+  <div class="base_dropdown" :class="[`base_dropdown--${variant}`]" ref="wrapperRef" tabindex="0" @blur="closePopup">
+    <div class="base_dropdown__display" @click="togglePopup">
+      <span class="base_dropdown__text">{{ currentLabel }}</span>
+      <div class="icon_down" :class="{ 'rotate-180': isOpen }"></div>
+    </div>
+    
+    <Transition name="fade-slide">
+      <ul class="base_dropdown__list shadow-box" v-if="isOpen" @mousedown.prevent>
+        <li 
+          v-for="opt in options" 
+          :key="opt.value" 
+          class="base_dropdown__item"
+          :class="{'selected': opt.value === modelValue, 'highlighted': highlightedValue === opt.value}"
+          @click.stop="selectOption(opt.value)"
+          @mouseenter="highlightedValue = opt.value"
+        >
+          <span class="item-label">{{ opt.label }}</span>
+          <svg v-if="opt.value === modelValue" class="check-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 13L9 17L19 7" stroke="#34B057" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </li>
+      </ul>
+    </Transition>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+
+const props = defineProps({
+  modelValue: {
+    type: [String, Number, Boolean],
+    default: ''
+  },
+  options: {
+    type: Array,
+    default: () => []
+  },
+  variant: {
+    type: String,
+    default: 'default' // 'default' (bordered) | 'borderless'
+  },
+  placeholder: {
+    type: String,
+    default: ''
+  }
+})
+
+const emit = defineEmits(['update:modelValue'])
+
+const wrapperRef = ref(null)
+const isOpen = ref(false)
+const highlightedValue = ref(null)
+
+const currentLabel = computed(() => {
+  const f = props.options.find(o => o.value === props.modelValue)
+  return f ? f.label : props.placeholder
+})
+
+const togglePopup = () => {
+  isOpen.value = !isOpen.value
+}
+
+const closePopup = () => {
+  isOpen.value = false
+}
+
+const selectOption = (val) => {
+  emit('update:modelValue', val)
+  closePopup()
+}
+
+const handleClickOutside = (e) => {
+  if (wrapperRef.value && !wrapperRef.value.contains(e.target)) {
+    closePopup()
+  }
+}
+
+onMounted(() => document.addEventListener('mousedown', handleClickOutside))
+onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
+</script>
+
+<style scoped lang="scss">
+.base_dropdown {
+  position: relative;
+  display: inline-block;
+  user-select: none;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+
+  &--default {
+    border: 1px solid #dddde4;
+    background-color: #fff;
+    height: 36px;
+    border-radius: 4px;
+    min-width: 150px;
+    
+    &:hover {
+      border-color: #34B057;
+    }
+  }
+
+  &--borderless {
+    border: none;
+    background-color: transparent;
+    height: 36px;
+  }
+
+  &__display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  &__text {
+    font-size: 14px;
+    color: #111;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Borderless specific styling */
+.base_dropdown--borderless .base_dropdown__text {
+  color: #111; /* Matching image 1 */
+}
+
+/* Icons */
+.icon_down {
+  transition: transform 0.2s;
+}
+.icon_down.rotate-180 {
+  transform: rotate(180deg);
+}
+
+/* Dropdown List */
+.base_dropdown__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  margin: 0;
+  padding: 8px 0;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.base_dropdown__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+  color: #111;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  gap: 16px;
+
+  &:hover, &.highlighted {
+    background-color: #f2f2f2;
+  }
+
+  &.selected {
+    background-color: #eafbf2; /* light green background */
+    color: #34B057; /* primary green text */
+    
+    &:hover, &.highlighted {
+      background-color: #eafbf2; /* keep light green */
+    }
+  }
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+</style>
