@@ -1,187 +1,185 @@
 <template>
   <div class="table_scroll">
-    <table class="grid_table">
-      <thead>
-        <tr>
-          <th class="checkbox_header">
-            <div class="icon_checkbox"></div>
-          </th>
-          <th
-            v-for="(col, index) in columns"
-            :key="col.key"
-            :style="{ minWidth: col.width, width: col.width, maxWidth: col.width }"
-          >
-            {{ col.title }}
-          </th>
-          <th class="action_header"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr class="table_row" v-for="(row, rowIndex) in data" :key="row.id">
-          <td class="checkbox_row">
-            <div class="icon_checkbox"></div>
-          </td>
-          <td
-            v-for="(col, colIndex) in columns"
-            :key="col.key"
-            :style="{ minWidth: col.width, width: col.width, maxWidth: col.width }"
-          >
-            <!-- Slot động cho phép custom hiển thị dữ liệu của một cột bất kỳ (VD: Cột avatar, trạng thái...) -->
-            <slot :name="`cell-${col.field}`" :row="row" :value="row[col.field]">
-              {{ row[col.field] }}
-            </slot>
-          </td>
-          <td class="action_row">
-            <slot name="actions" :row="row">
-              <BaseButton variant="icon-only" class="icon icon_edit_table" @click="$emit('editRowTable', row)" />
-              <BaseButton variant="icon-only" class="icon icon_delete_table" @click="$emit('deleteRowTable', row)" />
-            </slot>
-          </td>
-        </tr>
-        <!-- Nơi hiển thị khi không có dữ liệu -->
-        <tr v-if="!data || data.length === 0">
-          <td :colspan="columns.length" class="text-center no-data">--</td>
-        </tr>
-      </tbody>
-    </table>
+    <DxDataGrid
+      id="gridContainer"
+      :data-source="data"
+      :show-borders="false"
+      key-expr="id"
+      :hover-state-enabled="true"
+      class="custom-grid"
+      :column-auto-width="true"
+      :allow-column-resizing="true"
+      :show-row-lines="true"
+      :show-column-lines="false"
+      @row-click="onRowClick"
+    >
+      <DxPaging :enabled="false"/>
+      <DxSelection mode="multiple" show-check-boxes-mode="always" />
+      <DxScrolling show-scrollbar="always" />
+      
+      <!-- Render dynamic columns -->
+      <DxColumn
+        v-for="col in columns"
+        :key="col.field"
+        :data-field="col.field"
+        :caption="col.title"
+        :width="col.width"
+        :min-width="col.minWidth"
+        :fixed="col.fixed"
+        :fixed-position="col.fixedPosition"
+        :cell-template="col.cellTemplate"
+        :alignment="col.alignment || 'left'"
+      />
+
+      <!-- Fixed action column -->
+      <DxColumn
+        v-if="actionButtons && actionButtons.length > 0"
+        :width="300"
+        :fixed="true"
+        fixed-position="right"
+        css-class="action-column"
+        cell-template="actionTemplate"
+      />
+
+      <!-- Custom action column template -->
+      <template #actionTemplate="{ data }">
+        <div class="misa-action-buttons">
+          <BaseButton
+            v-for="(btn, index) in actionButtons"
+            :key="index"
+            variant="icon-only"
+            :icon-class="btn.icon"
+            :title="btn.hint"
+            @click.stop="btn.onClick(data)"
+          />
+        </div>
+      </template>
+
+      <!-- Custom slot rendering -->
+      <template v-for="col in columnsWithTemplates" :key="col.field" #[col.cellTemplate]="{ data }">
+        <slot :name="col.cellTemplate" :row="data.data" :value="data.value" />
+      </template>
+
+    </DxDataGrid>
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue';
+import {
+  DxDataGrid,
+  DxColumn,
+  DxPaging,
+  DxSelection,
+  DxScrolling
+} from 'devextreme-vue/data-grid';
+import BaseButton from '@/components/base/baseButton/BaseButton.vue';
 
-defineProps({
+const props = defineProps({
   columns: {
     type: Array,
     required: true,
-    type: Array,
-    required: true,
-    // Cấu trúc dự kiến: [{ id: 1, field: 'fullName', title: 'Họ và tên', width: '200px' }, ...]
   },
   data: {
     type: Array,
     default: () => [],
   },
-})
+  actionButtons: {
+    type: Array,
+    default: () => [],
+  }
+});
+
+const emit = defineEmits(['rowClick']);
+
+const columnsWithTemplates = computed(() => {
+  return props.columns.filter(col => col.cellTemplate);
+});
+
+const onRowClick = (e) => {
+  emit('rowClick', e.data);
+};
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
+@import '@/assets/variables.scss';
 .table_scroll {
   width: 100%;
   height: 100%;
   overflow: auto;
   border-top: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
-
-  background-color: #fff;
-  &::-webkit-scrollbar {
-    width: 12px; /* Tăng kích thước bao ngoài để chứa thanh cuộn khi to ra */
-    height: 12px;
-  }
-  &::-webkit-scrollbar-track {
-    background-color: #f1f1f1;
-    border-radius: 8px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background-color: #cdd3d6;
-    border-radius: 8px;
-    /* Dùng viền trùng màu với track để thu nhỏ thanh cuộn lúc bình thường */
-    border: 3px solid #f1f1f1;
-    background-clip: padding-box;
-    /* Thêm transition để tạo hiệu ứng mượt mà (chỉ trình duyệt hỗ trợ mới nhận) */
-    transition: all 0.3s ease-in-out;
-  }
-  &::-webkit-scrollbar-thumb:hover {
-    background-color: #929ea5; /* Đậm màu hơn */
-    /* Thu nhỏ viền lại để phần lõi (thumb) phình to ra */
-    border-width: 1px;
-  }
 }
-.grid_table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  position: relative;
-
-  thead {
-    position: sticky;
-    top: 0;
-    box-sizing: border-box;
-    background-color: #f9fafb;
-    z-index: 3;
-  }
-  th {
-    height: 48px;
-    padding: 8px;
-    box-sizing: border-box;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-    border-left: 1px solid transparent;
-    border-right: 1px solid transparent;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    &:hover {
-      border-left: 1px solid #ddd !important;
-      border-right: 1px solid #ddd !important;
-    }
-  }
-  td {
-    padding: 8px;
-    box-sizing: border-box;
-    text-align: left;
-    border-bottom: 1px solid rgb(221, 221, 221);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    height: 48px;
-    box-sizing: border-box;
-  }
+.custom-grid{
+  height: calc(100% - 120px);
 }
-.table_row:hover {
-  background-color: #e1eeff;
-  cursor: pointer;
+.dx-datagrid-headers {
+  border-bottom: 1px solid #e0e0e0 !important;
 }
-.action_header,
-.action_row {
-  min-width: 80px;
-  height: 48px;
-  box-sizing: border-box;
-  position: sticky;
-  right: 0;
-  background-color: #fff;
-}
-.checkbox_header,
-.checkbox_row {
-  min-width: 50px;
-  height: 48px;
-  box-sizing: border-box;
-  position: sticky;
-  left: 0;
-  background-color: #fff;
+.dx-datagrid-headers .dx-header-row > td {
+  background-color: #f4f5f8 !important;
+  border-bottom: none !important;
 }
 
-/* Đảm bảo 2 ô ở Header có màu nền đúng với Header và z-index cao nhất (cao hơn dòng) */
-.action_header,
-.checkbox_header {
-  background-color: #f9fafb;
-  z-index: 4;
+.dx-datagrid-text-content {
+    color: $text-primary-color !important; /* Màu chữ header #757575 theo MISA Design */
+    font-weight: 700;
+}
+.dx-checkbox-icon{
+ width: 20px !important;
+  height: 20px !important;
+  border: none !important;
+  background: url('https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg') -240px 0 no-repeat !important;
+}
+.dx-checkbox-checked .dx-checkbox-icon {
+     background: url('https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg') -260px 0 no-repeat !important;;
+}
+.dx-checkbox-checked .dx-checkbox-icon::before {
+  display: none !important;
 }
 
-/* Khi hover nguyên 1 dòng, 2 ô sticky ở dòng đó cũng phải đổi màu theo */
-.table_row:hover .action_row,
-.table_row:hover .checkbox_row {
-  background-color: #e1eeff;
+/* Xóa các đường kẻ dọc do cột ghim (fixed columns) tạo ra */
+.dx-datagrid-table td.dx-datagrid-sticky-column-border-right {
+  border-right: none !important;
 }
-.action_row {
+.dx-datagrid-table td.dx-datagrid-sticky-column-border-left {
+  border-left: none !important;
+}
+
+/* Custom Scrollbar Styles */
+.dx-scrollable-scrollbar {
+  border-radius: 8px !important;
+}
+.dx-scrollable-scrollbar .dx-scrollable-scroll {
+  border-radius: 8px !important;
+  background-color: #c0c0c0 !important;
+}
+.dx-scrollbar-hoverable:hover .dx-scrollable-scroll,
+.dx-scrollable-scrollbar-active .dx-scrollable-scroll,
+.dx-scrollable-scrollbar.dx-state-hover .dx-scrollable-scroll {
+  background-color: #757575 !important;
+}
+/* Optional: Background for the scrollbar track so it looks prominent */
+.dx-scrollbar-horizontal,
+.dx-scrollbar-vertical {
+  background-color: transparent !important;
+}
+
+/* Đổi màu background khi hover vào dòng */
+.dx-datagrid-table .dx-data-row.dx-state-hover > td {
+  background-color: #eafbf2 !important;
+}
+
+/* Ẩn hiện các nút action khi hover và căn phải */
+.misa-action-buttons {
   display: flex;
-  justify-content: start;
   align-items: center;
-  gap: 15px;
-  opacity: 1;
+  justify-content: flex-end; /* Căn phải */
+  padding-right: 10px; /* Cách mép phải 10px */
+  gap: 10px; /* Khoảng cách giữa các icon là 10px */
+  visibility: hidden;
 }
-.action_row .icon{
-  opacity: 0;
-}
-.table_row:hover .icon{
-  opacity: 1;
-  transition: opacity 0.3s ease-in-out;
+
+.dx-data-row.dx-state-hover .misa-action-buttons {
+  visibility: visible;
 }
 </style>

@@ -486,3 +486,31 @@
   -webkit-mask-repeat: no-repeat;
   background-color: #6e737a;
 }
+.icon_minus_yellow{
+  width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: -220px -40px;
+  background-color: #f90 !important;
+}
+.icon_copy_primary{
+  width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: -80px 0;
+  background-color: #6e737a;
+}
+.icon_pencil{
+  width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: -60px 0;
+  background-color: #6e737a;
+}
+.icon_trash_red{
+  width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: -120px -20px;
+  background-color: #ff6161;
+}

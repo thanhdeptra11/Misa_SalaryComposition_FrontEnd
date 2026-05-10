@@ -186,6 +186,7 @@ const rootTag = computed(() =>
 // consumer passes the icon class (e.g. icon_edit_table) via the outer
 // `class` attribute, which carries its own background/size.
 .base_button--icon-only {
+  cursor: pointer;
 }
 // --- mixed & combo: nền xanh lá, icon + text + divider + dropdown arrow ---
 .base_button--mixed, .base_button--combo {

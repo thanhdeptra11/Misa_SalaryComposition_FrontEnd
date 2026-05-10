@@ -12,31 +12,28 @@
       content-template="content"
       @value-changed="syncTreeViewSelection"
     >
-    <!-- Custom tagItems -->
       <template #customField="{ data }">
-        <div class="custom-tags-container">
-          <!-- Bắt buộc phải có DxTextBox ẩn để DevExtreme không báo lỗi E1010 -->
-          <DxTextBox
+       <DxTextBox
             class="hidden-dx-textbox"
             :read-only="true"
             :hover-state-enabled="false"
             :focus-state-enabled="false"
           />
-          <!-- Chưa chọn hiện placeholder -->
-          <div v-if="!treeBoxValue || treeBoxValue.length === 0" class="custom-placeholder">
-            Tất cả đơn vị
-          </div>
-          <!-- Đã chọn hiện thẻ -->
-          <div v-else class="custom-tags-wrapper">
-             <div v-for="tag in displayTags" :key="tag.id" class="misa-tag">
-                <span class="misa-tag-text">{{ tag.text }}</span>
-                <!-- stop ngăn event lan lên cha -->
-                <div class="misa-tag-remove" @click.stop="removeSelectedItem(tag.id)">
-                  <i class="icon_close_small"></i>
-                </div>
-             </div>
-          </div>
-        </div>
+       <div v-if="displayTags.length === 0" class="misa-tree-placeholder">
+         Tất cả đơn vị
+       </div>
+       <DxTagBox
+         v-else
+         class="misa-tree-tagbox"
+         :data-source="displayTags"
+         :value="displayTagIds"
+         display-expr="text"
+         value-expr="id"
+         :show-drop-down-button="false"
+         :open-on-field-click="false"
+         :search-enabled="false"
+         @value-changed="onTagBoxValueChanged"
+       />
       </template>
 
       <template #content="{ data }">
@@ -69,6 +66,7 @@ import { ref, watch, computed } from 'vue';
 import { DxDropDownBox } from 'devextreme-vue/drop-down-box';
 import { DxTreeView } from 'devextreme-vue/tree-view';
 import { DxTextBox } from 'devextreme-vue/text-box';
+import { DxTagBox } from 'devextreme-vue/tag-box';
 import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
 
 const props = defineProps({
@@ -155,7 +153,7 @@ const displayTags = computed(() => {
   for (const id of treeBoxValue.value) {
     const item = props.customDataSource.find(x => x.id === id);
     if (item) {
-      // Chỉ hiển thị tag nếu là root hoặc cha của nó KHÔNG được chọn
+      
       const parentId = item[props.parentIdExpr];
       if (!parentId || parentId === props.rootValue || !selectedSet.has(parentId)) {
         result.push({ id: item.id, text: item[props.displayExpr] });
@@ -163,6 +161,10 @@ const displayTags = computed(() => {
     }
   }
   return result;
+});
+
+const displayTagIds = computed(() => {
+  return displayTags.value.map(tag => tag.id);
 });
 
 const removeSelectedItem = (id) => {
@@ -173,7 +175,12 @@ const removeSelectedItem = (id) => {
     treeBoxValue.value = treeBoxValue.value.filter(val => val !== id);
   }
 };
-
+const onTagBoxValueChanged = (e) => {
+  // Lấy ra các tagbox bị remove
+  const removedIds = e.previousValue.filter(id => !e.value.includes(id));
+  // Loại bỏ item đó ra khỏi cây
+  removedIds.forEach(id => removeSelectedItem(id));
+};
 const treeViewItemSelectionChanged = (e) => {
   const treeView = e.component;
   const selectedNodes = treeView.getSelectedNodes();
@@ -339,61 +346,22 @@ const treeViewItemSelectionChanged = (e) => {
   pointer-events: none !important;
 }
 
-.custom-tags-container {
-  display: flex;
-  align-items: center;
+/* Custom placeholder hiển thị khi không có tag nào được chọn */
+.misa-tree-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-}
-
-.custom-tags-wrapper {
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  align-items: center;
-  width: 100%;
-  padding-left: 8px;
-  scrollbar-width: none;
-}
-.custom-tags-wrapper::-webkit-scrollbar {
-  display: none;
-}
-
-.misa-tag {
   display: flex;
   align-items: center;
-  background-color: #f0f2f4; /* Nền xám nhạt giống hình */
-  border-radius: 4px;
-  padding: 0 4px 0 8px;
-  white-space: nowrap;
-  height: 24px;
-}
-
-.misa-tag-text {
-  font-size: 13px;
-  color: #111;
-  margin-right: 4px;
-}
-
-.misa-tag-remove {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-}
-
-.misa-tag-remove:hover {
-  background-color: #e0e0e0;
-}
-
-.custom-placeholder {
-  color: #9ca6b5;
   padding-left: 12px;
+  color: #999;
+  font-size: 14px;
+  pointer-events: none; /* Xuyên click xuống DropDownBox */
 }
+
+
 
 /* Ghi đè triệt để icon mặc định của DevExtreme (vì DevExtreme dùng font chữ) */
 :deep(.dx-dropdowneditor-icon::before) {
@@ -409,11 +377,6 @@ const treeViewItemSelectionChanged = (e) => {
   background-color: #7a8188 !important; /* Dùng màu xám chuẩn, cấm hover đổi màu */
   -webkit-mask-image: url('@/assets/ICON.svg') !important;
   -webkit-mask-position: -32px -48px !important;
-  transition: transform 0.2s ease !important;
-  display: block !important;
-  margin: auto !important; /* Tự động căn giữa trong nút */
-  opacity: 1 !important; /* Cấm DevExtreme làm mờ khi hover */
-  border-radius: 0 !important;
 }
 
 /* Khóa luôn việc DevExtreme tự động đổi màu background của icon khi hover */
@@ -431,5 +394,68 @@ const treeViewItemSelectionChanged = (e) => {
   background-color: transparent !important;
 }
 
+/* ---------------------------------------------------
+   CUSTOM TAGBOX TEMPLATE (HIỂN THỊ ITEM ĐÃ CHỌN)
+   --------------------------------------------------- */
+/* Ẩn dấu nháy chuột và đổi con trỏ thành bàn tay để giống ô chọn */
+:deep(.misa-tree-tagbox .dx-texteditor-input) {
+  cursor: pointer;
+  caret-color: transparent; /* Ẩn con trỏ nhấp nháy */
+}
 
+/* Bỏ viền của DxTagBox vì DxDropDownBox đã có viền */
+:deep(.misa-tree-tagbox) {
+  border: none !important;
+  background-color: transparent !important;
+}
+
+/* Chỉnh style cho thẻ tag giống màu nền của MISA Design System */
+:deep(.misa-tree-tagbox .dx-tag) {
+  color: #111;
+  background-color: #eaedf1; /* Màu nền xám nhạt như hình 2 */
+  border-radius: 4px; /* Bo góc nhẹ hơn */
+  margin: 2px 4px 2px 0; /* Cách đều các tag */
+}
+
+:deep(.misa-tree-tagbox .dx-tag-content) {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  padding: 3px 26px 3px 8px; /* Tăng padding-right để chừa chỗ cho icon X (icon X dùng position absolute) */
+  white-space: nowrap; /* Không cho chữ bị xuống dòng */
+}
+
+/* Container của nút xóa */
+:deep(.misa-tree-tagbox .dx-tag-remove-button) {
+  width: 20px !important;
+  height: 20px !important;
+  cursor: pointer;
+  background: none !important;
+  border: none !important;
+  margin-left: 2px; /* Cách chữ một chút */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:deep(.misa-tree-tagbox .dx-tag-remove-button::after) {
+  content: none !important;
+  display: none !important;
+}
+
+/* Sử dụng .icon_close_small cho pseudo-element thay vì icon mặc định */
+:deep(.misa-tree-tagbox .dx-tag-remove-button::before) {
+  content: "" !important; /* Ghi đè chữ "x" mặc định */
+  position: absolute;
+  left: -4px;
+  top: 8px;
+  display: block !important;
+  width: 20px !important;
+  height: 20px !important;
+  -webkit-mask-image: url('https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg') !important;
+  -webkit-mask-position: -140px -80px !important;
+  -webkit-mask-repeat: no-repeat !important;
+  background-color: #6e737a !important; /* Màu của icon X */
+  transform: none !important; /* Xóa các transform xoay mặc định của DevExtreme nếu có */
+}
 </style>

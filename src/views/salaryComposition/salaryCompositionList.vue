@@ -22,23 +22,28 @@
         :statusOptions="statusOptions"
         :unitOptions="unitOptions"
       />
-      <GridData :columns="tableColumns" :data="tableData">
-        <template #actions="{ row }">
-          <BaseButton variant="icon-only" class="icon icon_close" @click="handleAction(row, 'remove')" />
-          <BaseButton variant="icon-only" class="icon icon_copy" @click="handleAction(row, 'copy')" />
-          <BaseButton variant="icon-only" class="icon icon_edit_table" @click="handleAction(row, 'edit')" />
-          <BaseButton variant="icon-only" class="icon icon_delete_table" @click="handleAction(row, 'delete')" />
+      
+      <GridData :columns="tableColumns" :data="tableData" :actionButtons="actionButtons">
+        
+        <template #valueExpressionTemplate="{ value }">
+          <prism-editor 
+            class="excel-formula-editor" 
+            :modelValue="value || ''" 
+            :highlight="highlighter" 
+            :readonly="true" 
+          />
         </template>
 
-        <template #cell-tinhChat="{ value }">
-          <span class="text-property">{{ value }}</span>
+        <template #statusTemplate="{ value }">
+           <span v-if="value == 1" style="color: #00a85a; display: flex; align-items: start; gap: 4px;">
+             Đang theo dõi
+           </span>
+           <span v-else style="color: #ff9800; display: flex; align-items: start; gap: 4px;">
+             Ngừng theo dõi
+           </span>
         </template>
         
-        <template #cell-loaiThanhPhan="{ value }">
-          <span>{{ value }}</span>
-        </template>
       </GridData>
-      <!-- Footer or Pagination could go here -->
     </div>
   </div>
 </template>
@@ -49,8 +54,24 @@ import Header from '@/components/mainViewComponents/Header.vue'
 import GridDataToolbar from '@/components/base/baseGridData/GridDataToolbar.vue'
 import GridData from '@/components/base/baseGridData/GridData.vue'
 import BaseButton from '@/components/base/baseButton/BaseButton.vue'
+
+// Import cho Prism Editor
+import { PrismEditor } from 'vue-prism-editor'
+import 'vue-prism-editor/dist/prismeditor.min.css'
+import { highlight, languages } from 'prismjs/components/prism-core'
+import 'prismjs/components/prism-clike'
+import 'prismjs/components/prism-javascript'
+import 'prismjs/themes/prism.css'
+
 import enumService from '@/services/enumService'
 import organizationService from '@/services/organizationService'
+import salaryCompositionService from '@/services/salaryCompositionService'
+
+// Hàm highlight syntax cho Prism
+const highlighter = (code) => {
+  if (!code) return '';
+  return highlight(code, languages.js); 
+};
 
 // -- Toolbar states --
 const currentStatus = ref('');
@@ -87,28 +108,84 @@ const fetchUnitOptions = async () => {
   }
 };
 
-onMounted(() => {
-  fetchStatusOptions();
-  fetchUnitOptions();
-});
-
-const handleSearch = (keyword) => {
-  console.log("Tìm kiếm:", keyword);
-};
-
 // -- Table config --
 const tableColumns = ref([
-  { field: 'maThanhPhan', title: 'Mã thành phần', width: '250px' },
-  { field: 'donViApDung', title: 'Đơn vị áp dụng', width: '250px' },
-  { field: 'loaiThanhPhan', title: 'Loại thành phần', width: '200px' },
-  { field: 'tinhChat', title: 'Tính chất', width: '150px' },
-  { field: 'chiuThue', title: 'Chịu thuế', width: '150px' }
+  { field: 'compositionCode', title: 'Mã thành phần', width: 200, fixed: true },
+  { field: 'organizationName', title: 'Đơn vị áp dụng', width: 250 },
+  { field: 'compositionType', title: 'Loại thành phần', width: 200 },
+  { field: 'property', title: 'Tính chất', width: 150 },
+  { field: 'taxableType', title: 'Chịu thuế', width: 150 },
+  { field: 'taxDeductionType', title: 'Giảm trừ khi tính thuế', width: 200 },
+  { field: 'norm', title: 'Định mức', width: 150 },
+  { field: 'valueType', title: 'Kiểu giá trị', width: 150 },
+  { field: 'valueExpression', title: 'Giá trị', width: 250, cellTemplate: 'valueExpressionTemplate' },
+  { field: 'description', title: 'Mô tả', width: 250 },
+  { field: 'showOnPayslip', title: 'Hiển thị trên phiếu lương', width: 200 },
+  { field: 'creationSource', title: 'Nguồn tạo', width: 150 },
+  { field: 'status', title: 'Trạng thái', width: 150, cellTemplate: 'statusTemplate' },
+  { field: 'compositionName', title: 'Tên thành phần', width: 250 }
 ]);
 
 const tableData = ref([]);
 
-const handleAction = (row, action) => {
-  console.log('Action', action, 'on row', row);
+const actionButtons = [
+  {
+    hint: 'Ngừng theo dõi',
+    icon: 'icon_minus_yellow',
+    onClick: (e) => {
+      alert('Minus ' + e.row.data.compositionName)
+    }
+  },
+  {
+    hint: 'Nhân bản',
+    icon: 'icon_copy_primary',
+    onClick: (e) => {
+      alert('Clone ' + e.row.data.compositionName)
+    }
+  },
+  {
+    hint: 'Sửa',
+    icon: 'icon_pencil',
+    onClick: (e) => {
+      alert('Edit ' + e.row.data.compositionName)
+    }
+  },
+  {
+    hint: 'Xóa',
+    icon: 'icon_trash_red',
+    onClick: (e) => {
+      alert('Delete ' + e.row.data.compositionName)
+    }
+  }
+];
+
+const fetchGridData = async () => {
+  try {
+    const payload = {
+      pageNumber: 1,
+      pageSize: 15,
+      searchTerm: "",
+      filters: []
+    };
+    const res = await salaryCompositionService.filter(payload);
+    // Giả sử res trả về data.data theo cấu trúc đã cung cấp
+    if (res && res.data) {
+      // res.data có thể là mảng trực tiếp hoặc nằm trong res.data.data
+      tableData.value = Array.isArray(res.data) ? res.data : (res.data.data || []);
+    }
+  } catch(error) {
+    console.error("Lỗi khi lấy dữ liệu Grid:", error);
+  }
+}
+
+onMounted(() => {
+  fetchStatusOptions();
+  fetchUnitOptions();
+  fetchGridData();
+});
+
+const handleSearch = (keyword) => {
+  console.log("Tìm kiếm:", keyword);
 };
 
 // Xử lý khi click vào phần chính của button (bên trái mũi tên)
@@ -143,7 +220,21 @@ const handleDropdownClick = () => {
   overflow: hidden;
 }
 
-.text-property {
-  color: #111;
+/* Tùy chỉnh editor cho công thức */
+.excel-formula-editor {
+  background: transparent;
+  font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+  font-size: 13px;
+  max-height: 100px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+:deep(.prism-editor__textarea) {
+  outline: none !important;
+}
+
+:deep(.prism-editor__editor) {
+  white-space: pre-wrap !important;
 }
 </style>

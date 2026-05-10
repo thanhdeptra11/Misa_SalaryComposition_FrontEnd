@@ -17,7 +17,9 @@
     "devextreme": "^25.2.7",
     "devextreme-vue": "^25.2.7",
     "pinia": "^3.0.4",
+    "prismjs": "^1.30.0",
     "vue": "^3.5.30",
+    "vue-prism-editor": "^2.0.0-alpha.2",
     "vue-router": "^5.0.3"
   },
   "devDependencies": {
