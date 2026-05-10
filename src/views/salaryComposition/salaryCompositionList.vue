@@ -19,6 +19,8 @@
         @search="handleSearch"
         v-model:statusFilterValue="currentStatus"
         v-model:unitFilterValue="currentUnit"
+        :statusOptions="statusOptions"
+        :unitOptions="unitOptions"
       />
       <GridData :columns="tableColumns" :data="tableData">
         <template #actions="{ row }">
@@ -42,15 +44,54 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import Header from '@/components/mainViewComponents/Header.vue'
 import GridDataToolbar from '@/components/base/baseGridData/GridDataToolbar.vue'
 import GridData from '@/components/base/baseGridData/GridData.vue'
 import BaseButton from '@/components/base/baseButton/BaseButton.vue'
+import enumService from '@/services/enumService'
+import organizationService from '@/services/organizationService'
 
 // -- Toolbar states --
-const currentStatus = ref('tracking');
-const currentUnit = ref('all');
+const currentStatus = ref('');
+const currentUnit = ref([]);
+const statusOptions = ref([]);
+const unitOptions = ref([]);
+
+const fetchStatusOptions = async () => {
+  try {
+    const data = await enumService.getEnumByName('FollowStatus');
+    if (data && Array.isArray(data)) {
+      statusOptions.value = data.map(item => ({
+        label: item.description,
+        value: item.value
+      }));
+      // Cập nhật giá trị hiện tại nếu giá trị đang có không nằm trong danh sách
+      if (statusOptions.value.length > 0 && !statusOptions.value.some(o => o.value === currentStatus.value)) {
+        currentStatus.value = statusOptions.value[0].value;
+      }
+    }
+  } catch (error) {
+    console.error("Lỗi khi lấy dữ liệu FollowStatus:", error);
+  }
+};
+
+const fetchUnitOptions = async () => {
+  try {
+    const data = await organizationService.getOrganizations();
+    if (data && Array.isArray(data)) {
+      unitOptions.value = data;
+    }
+  } catch (error) {
+    console.error("Lỗi khi lấy dữ liệu phòng ban:", error);
+  }
+};
+
+onMounted(() => {
+  fetchStatusOptions();
+  fetchUnitOptions();
+});
+
 const handleSearch = (keyword) => {
   console.log("Tìm kiếm:", keyword);
 };
@@ -64,16 +105,7 @@ const tableColumns = ref([
   { field: 'chiuThue', title: 'Chịu thuế', width: '150px' }
 ]);
 
-const tableData = ref([
-  { id: 1, maThanhPhan: 'TONG_SO_LUONG_NHAN_VIEN_CUA_DON_VI', donViApDung: 'Công ty Thí điểm AgentWork', loaiThanhPhan: 'Khác', tinhChat: 'Khác', chiuThue: '-' },
-  { id: 2, maThanhPhan: 'TRUY_THU_BHYT_CONG_TY_DONG', donViApDung: 'Công ty Thí điểm AgentWork', loaiThanhPhan: 'Bảo hiểm - Công đoàn', tinhChat: 'Khác', chiuThue: '-' },
-  { id: 3, maThanhPhan: '__HT_DS', donViApDung: 'Công ty Thí điểm AgentWork', loaiThanhPhan: 'Lương', tinhChat: 'Thu nhập', chiuThue: 'Chịu thuế' },
-  { id: 4, maThanhPhan: '__HT_DT', donViApDung: 'Công ty Thí điểm AgentWork', loaiThanhPhan: 'Khác', tinhChat: 'Thu nhập', chiuThue: 'Chịu thuế' },
-  { id: 5, maThanhPhan: '__HTDS_KHOAN', donViApDung: 'Công ty Thí điểm AgentWork', loaiThanhPhan: 'Doanh số', tinhChat: 'Thu nhập', chiuThue: 'Chịu thuế' },
-  { id: 6, maThanhPhan: '__HTDS_NHOM_1', donViApDung: 'Công ty Thí điểm AgentWork', loaiThanhPhan: 'Khác', tinhChat: 'Thu nhập', chiuThue: 'Chịu thuế' },
-  { id: 7, maThanhPhan: '__THU_NHAP_KHONG_GOM_PHUC_LOI', donViApDung: 'Công ty Thí điểm AgentWork', loaiThanhPhan: 'Khác', tinhChat: 'Thu nhập', chiuThue: 'Chịu thuế' },
-  { id: 8, maThanhPhan: '__THU_NO', donViApDung: 'Công ty Thí điểm AgentWork', loaiThanhPhan: 'Khác', tinhChat: 'Thu nhập', chiuThue: 'Chịu thuế' }
-]);
+const tableData = ref([]);
 
 const handleAction = (row, action) => {
   console.log('Action', action, 'on row', row);

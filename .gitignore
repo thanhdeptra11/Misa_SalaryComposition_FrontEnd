@@ -27,6 +27,7 @@ coverage
 *.tsbuildinfo
 
 .eslintcache
+.evn
 
 # Cypress
 /cypress/videos/
@@ -37,4 +38,4 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
-/.Net_Misa_Aimis
+/.Net_Misa_SalaryComposition

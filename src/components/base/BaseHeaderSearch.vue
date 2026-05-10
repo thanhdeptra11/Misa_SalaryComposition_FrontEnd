@@ -1,7 +1,7 @@
 <template>
   <div class="header_search" :class="[`header_search--${variant}`]">
     <div class="header_search--icon">
-      <div class="magnifying_glass_icon"></div>
+      <div class="icon_glass_search"></div>
     </div>
     <input type="text" class="header_search--input" :placeholder="placeholder" v-model="keyword" />
   </div>

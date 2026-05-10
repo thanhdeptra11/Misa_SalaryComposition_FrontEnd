@@ -19,12 +19,11 @@
           placeholder="Tất cả trạng thái"
         />
         
-        <BaseDropdown 
+        <BaseHierachyTree 
           v-if="showUnitFilter"
           v-model="internalUnit"
-          :options="unitOptions"
-          variant="default"
-          placeholder="Tất cả đơn vị"
+          :custom-data-source="unitOptions"
+          display-expr="organizationName"
         />
         
         <BaseButton v-if="showFilterBtn" variant="icon-only" class="icon icon_filter" />
@@ -38,11 +37,12 @@
 import { ref, watch } from 'vue'
 import BaseHeaderSearch from '@/components/base/BaseHeaderSearch.vue'
 import BaseDropdown from '@/components/base/baseInput/BaseDropdown.vue'
+import BaseHierachyTree from '@/components/base/baseInput/BaseHierachyTree.vue'
 import BaseButton from '@/components/base/baseButton/BaseButton.vue'
 
 const props = defineProps({
   statusFilterValue: { type: [String, Number], default: '' },
-  unitFilterValue: { type: [String, Number], default: '' },
+  unitFilterValue: { type: [Array, String, Number], default: () => [] },
   
   // Controls what default elements to show
   showStatusFilter: { type: Boolean, default: true },
@@ -53,24 +53,18 @@ const props = defineProps({
   // Options for dropdowns
   statusOptions: { 
     type: Array, 
-    default: () => [
-      { label: 'Đang theo dõi', value: 'tracking' },
-      { label: 'Ngừng theo dõi', value: 'untracking' }
-    ] 
+    default: () => [] 
   },
   unitOptions: { 
     type: Array, 
-    default: () => [
-      { label: 'Tất cả đơn vị', value: 'all' },
-      { label: 'Công ty Thí điểm AgentWork', value: 'agentwork' }
-    ] 
+    default: () => [] 
   }
 })
 
 const emit = defineEmits(['search', 'update:statusFilterValue', 'update:unitFilterValue'])
 
-const internalStatus = ref(props.statusFilterValue || (props.statusOptions[0]?.value))
-const internalUnit = ref(props.unitFilterValue || (props.unitOptions[0]?.value))
+const internalStatus = ref(props.statusFilterValue || (props.statusOptions && props.statusOptions[0]?.value) || '')
+const internalUnit = ref(Array.isArray(props.unitFilterValue) ? props.unitFilterValue : [])
 
 watch(internalStatus, (val) => emit('update:statusFilterValue', val))
 watch(internalUnit, (val) => emit('update:unitFilterValue', val))

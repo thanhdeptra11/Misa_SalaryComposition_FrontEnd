@@ -139,7 +139,7 @@ const rootTag = computed(() =>
   cursor: pointer;
   &:hover {
     border-color: $primary-green;
-    background-color: $icon-only-button-hover;
+    background-color: $primary-background;
     .base_button__icon {
       background-color: $primary-green !important;
     }

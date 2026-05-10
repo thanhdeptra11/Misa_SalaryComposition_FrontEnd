@@ -446,3 +446,43 @@
   -webkit-mask-repeat: no-repeat;
   background-color: #6e737a
 }
+
+.icon_square_default {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: url('https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg')
+    -240px 0 no-repeat;
+}
+
+.icon_square_check_primary{
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: url('https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg')
+    -260px 0 no-repeat;
+}
+.icon_toggle_minus{
+  width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: 120px 40px;
+  -webkit-mask-repeat: no-repeat;
+  background-color: #666;
+}
+.icon_toggle_plus{
+  width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: 120px 40px;
+  -webkit-mask-repeat: no-repeat;
+  background-color: #666;
+}
+.icon_close_small{
+   width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: -140px -80px;
+  -webkit-mask-repeat: no-repeat;
+  background-color: #6e737a;
+}
