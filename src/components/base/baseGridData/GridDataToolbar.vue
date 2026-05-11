@@ -24,6 +24,7 @@
           v-model="internalUnit"
           :custom-data-source="unitOptions"
           display-expr="organizationName"
+          :placeholder="placeholder"
         />
         
         <BaseButton v-if="showFilterBtn" variant="icon-only" class="icon icon_filter" />
@@ -58,6 +59,10 @@ const props = defineProps({
   unitOptions: { 
     type: Array, 
     default: () => [] 
+  },
+  placeholder: { 
+    type: String, 
+    default: '' 
   }
 })
 

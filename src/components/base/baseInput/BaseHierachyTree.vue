@@ -7,7 +7,7 @@
       :data-source="customDataSource"
       value-expr="id"
       :display-expr="displayExpr"
-      placeholder="Tất cả đơn vị"
+      :placeholder="placeholder"
       field-template="customField"
       content-template="content"
       @value-changed="syncTreeViewSelection"
@@ -20,7 +20,7 @@
             :focus-state-enabled="false"
           />
        <div v-if="displayTags.length === 0" class="misa-tree-placeholder">
-         Tất cả đơn vị
+         {{ placeholder }}
        </div>
        <DxTagBox
          v-else
@@ -89,6 +89,10 @@ const props = defineProps({
   customDataSource: {
     type: Array,
     required: true
+  },
+  placeholder: {
+    type: String,
+    default: ''
   }
 });
 

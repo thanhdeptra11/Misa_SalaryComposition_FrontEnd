@@ -34,7 +34,7 @@
       <!-- Fixed action column -->
       <DxColumn
         v-if="actionButtons && actionButtons.length > 0"
-        :width="300"
+        :width="200"
         :fixed="true"
         fixed-position="right"
         css-class="action-column"
@@ -105,12 +105,12 @@ const onRowClick = (e) => {
 @import '@/assets/variables.scss';
 .table_scroll {
   width: 100%;
-  height: 100%;
+  height: calc(100% - 120px);
   overflow: auto;
   border-top: 1px solid #e0e0e0;
 }
 .custom-grid{
-  height: calc(100% - 120px);
+  height: 100%;
 }
 .dx-datagrid-headers {
   border-bottom: 1px solid #e0e0e0 !important;

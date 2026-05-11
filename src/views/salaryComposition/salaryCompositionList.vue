@@ -1,5 +1,6 @@
 <template>
-  <div class="salary_composition_layout">
+  <!-- Hiển thị danh sách thành phần lương -->
+  <div class="salary_composition_layout" v-if="!isShowingForm">
     <Header class="header" title="Thành phần lương">
       <template #right>
         <BaseButton variant="primary" iconClass="icon_scale" buttonText="Danh mục của hệ thống" />
@@ -21,6 +22,7 @@
         v-model:unitFilterValue="currentUnit"
         :statusOptions="statusOptions"
         :unitOptions="unitOptions"
+        placeholder="Tất cả đơn vị"  
       />
       
       <GridData :columns="tableColumns" :data="tableData" :actionButtons="actionButtons">
@@ -42,19 +44,26 @@
              Ngừng theo dõi
            </span>
         </template>
-        
       </GridData>
+      <GridDataFooter 
+        v-model:currentPage="currentPage"
+        v-model:pageSize="pageSize"
+        :totalRecords="totalRecords"
+      />
     </div>
   </div>
+  <!-- Hiển thị form -->
+  <SalaryCompositionForm v-else @back="isShowingForm = false" />
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import Header from '@/components/mainViewComponents/Header.vue'
 import GridDataToolbar from '@/components/base/baseGridData/GridDataToolbar.vue'
 import GridData from '@/components/base/baseGridData/GridData.vue'
 import BaseButton from '@/components/base/baseButton/BaseButton.vue'
-
+import GridDataFooter from '@/components/base/baseGridData/GridDataFooter.vue'
+import SalaryCompositionForm from './salaryCompositionForm.vue'
 // Import cho Prism Editor
 import { PrismEditor } from 'vue-prism-editor'
 import 'vue-prism-editor/dist/prismeditor.min.css'
@@ -127,7 +136,10 @@ const tableColumns = ref([
 ]);
 
 const tableData = ref([]);
-
+// Phân trang
+const totalRecords = ref(0);
+const currentPage = ref(1);
+const pageSize = ref(15);
 const actionButtons = [
   {
     hint: 'Ngừng theo dõi',
@@ -158,12 +170,14 @@ const actionButtons = [
     }
   }
 ];
+// State trạng thái form
+const isShowingForm = ref(false);
 
 const fetchGridData = async () => {
   try {
     const payload = {
-      pageNumber: 1,
-      pageSize: 15,
+      pageNumber: currentPage.value,
+      pageSize: pageSize.value,
       searchTerm: "",
       filters: []
     };
@@ -172,11 +186,16 @@ const fetchGridData = async () => {
     if (res && res.data) {
       // res.data có thể là mảng trực tiếp hoặc nằm trong res.data.data
       tableData.value = Array.isArray(res.data) ? res.data : (res.data.data || []);
+      totalRecords.value = res.totalRecords || 0;
     }
   } catch(error) {
     console.error("Lỗi khi lấy dữ liệu Grid:", error);
   }
 }
+// Gọi lại api khi thay đổi số trang hoặc bản ghi
+watch([currentPage, pageSize], () => {
+  fetchGridData();
+})
 
 onMounted(() => {
   fetchStatusOptions();
@@ -190,7 +209,7 @@ const handleSearch = (keyword) => {
 
 // Xử lý khi click vào phần chính của button (bên trái mũi tên)
 const handleMainClick = () => {
-  console.log('Main button clicked: Thêm mới');
+  isShowingForm.value = true;
 };
 
 // Xử lý khi click vào phần mũi tên (dropdown)

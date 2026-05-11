@@ -1,9 +1,11 @@
 <template>
   <div class="base-input-wrapper">
-    <label v-if="label" class="base-input-label">
-      {{ label }} <span v-if="required" class="required">*</span>
+    <label v-if="label" class="base-input-label"
+    :style="{ width: labelWidth }">
+     <b>{{ label }}</b> <span v-if="required" class="required">*</span>
     </label>
-    <div class="base-input-container">
+    <div class="base-input-container"
+    :style="{ width: inputWidth }">
       <input
         :type="type"
         class="base-input-field"
@@ -36,6 +38,15 @@ defineProps({
   type: {
     type: String,
     default: 'text'
+  },
+  labelWidth: {
+    type: String,
+    default: '100%'
+  },
+
+  inputWidth: {
+    type: String,
+    default: '100%'
   }
 })
 
@@ -47,15 +58,15 @@ defineEmits(['update:modelValue'])
 
 .base-input-wrapper {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
   width: 100%;
+  margin-bottom: 16px;
 }
 
 .base-input-label {
   font-size: 14px;
-  font-weight: 500;
-  color: #454545;
+  color: #212121;
+  padding-right: 8px;
 }
 
 .required {
@@ -84,7 +95,7 @@ defineEmits(['update:modelValue'])
   
   &:hover,
   &:focus {
-    border-color: $primary-blue;
+    border-color: $primary-green;
   }
 }
 </style>

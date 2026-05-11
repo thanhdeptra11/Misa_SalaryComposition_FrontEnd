@@ -4,6 +4,7 @@
     class="base_button"
     :class="`base_button--${variant}`"
     :title="title"
+    :style="{width: width}"
     @click="$emit('click')"
   >
     <!--  -->
@@ -27,7 +28,7 @@ const props = defineProps({
   variant: {
     type: String,
     required: true,
-    validator: (v) => ['primary', 'secondary', 'icon', 'icon-only', 'mixed', 'combo'].includes(v),
+    validator: (v) => ['primary', 'secondary', 'icon', 'icon-only', 'mixed', 'combo', "no-border"].includes(v),
   },
   iconClass: {
     type: String,
@@ -40,6 +41,10 @@ const props = defineProps({
   title: {
     type: String,
     default: '',
+  },
+  width: {
+    type: String,
+    default: 'auto',
   },
 })
 
@@ -91,7 +96,7 @@ const rootTag = computed(() =>
   }
 }
 
-// --- secondary: nền xanh blue, text trắng, hover chuyển xanh lá cây ---
+// --- secondary: nền xanh lá, text trắng, hover chuyển xanh lá cây ---
 .base_button--secondary {
   display: flex;
   align-items: center;
@@ -119,7 +124,7 @@ const rootTag = computed(() =>
   }
   &:hover {
     transition: color 0.2s;
-    background-color: $primary-green !important;
+    background-color: $primary-hover-green !important;
     box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1) !important;
   }
 }

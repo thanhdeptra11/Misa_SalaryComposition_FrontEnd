@@ -34,7 +34,6 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-
 const props = defineProps({
   totalRecords: { type: Number, default: 0 },
   currentPage: { type: Number, default: 1 },
@@ -92,6 +91,7 @@ const nextPage = () => {
 </script>
 
 <style lang="scss" scoped>
+@import '@/assets/variables.scss';
 .grid_data_footer {
   display: flex;
   justify-content: space-between;

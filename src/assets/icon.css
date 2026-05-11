@@ -514,3 +514,17 @@
   -webkit-mask-position: -120px -20px;
   background-color: #ff6161;
 }
+.icon_check{
+  width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: -120px -60px;
+  background-color: #34b057;
+}
+.icon_arrow_left{
+  width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: -180px 0;
+  background-color: #6e737a;
+}

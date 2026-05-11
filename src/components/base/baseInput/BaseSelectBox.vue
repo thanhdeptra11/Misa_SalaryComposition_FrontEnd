@@ -16,6 +16,10 @@
           @mouseenter="highlightedValue = opt.value"
         >
           <span class="item-label">{{ opt.label }}</span>
+          <span 
+            v-if="opt.value === modelValue"
+            class="icon_check"
+          ></span>
         </li>
       </ul>
     </Transition>
@@ -114,20 +118,6 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
   gap: 4px;
 }
 
-.base_select_box--borderless .base_select_box__display:hover .base_select_box__text {
-  color: #214bf5;
-}
-.base_select_box--default:hover {
-  border-color: #2a7efc;
-}
-.base_select_box--default:hover .base_select_box__text{
-  color: #2a7efc;
-}
-
-.icon_down.rotate-180 {
-  transform: rotate(180deg);
-}
-
 .base_select_box__dropdown {
   position: absolute;
   bottom: calc(100% + 4px); /* Hiển thị ngoi lên trên form do form nằm ở Footer vướng đáy */
@@ -145,7 +135,7 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 
 .base_select_box__item {
   display: flex;
-  justify-content: center; /* Như thiết kế, chữ canh giữa */
+  justify-content: start; /* Như thiết kế, chữ canh giữa */
   align-items: center;
   height: 32px;
   padding: 0 12px;
@@ -156,11 +146,10 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 }
 
 .base_select_box__item:hover, .base_select_box__item.highlighted {
-  background-color: #e5efff;
+  background-color: #eafbf2;
 }
 .base_select_box__item.selected {
-  font-weight: 500;
-  color: #111;
+  background-color: #eafbf2;
 }
 
 .fade-slide-enter-active,
@@ -171,5 +160,9 @@ onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateY(4px);
+}
+.base_select_box__dropdown li{
+  display: flex;
+  justify-content: space-between;
 }
 </style>
