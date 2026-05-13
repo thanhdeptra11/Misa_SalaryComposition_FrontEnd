@@ -1,3 +1,11 @@
+<!-- Component = inpu + dropdown(dùng để chọn giá trị từ danh sách có thể gõ để filter và loadmore) 
+ Các tính năng chính:
+  Gõ text -> tự lọc options theo từ khóa
+  Click icon -> mở đóng dropdonw
+  Chọn 1 option -> emit giá trị qua v-model
+  Click ra ngoài -> đóng dropdown, khôi phục text về giá trị đã chọn không giữ text gõ dở
+  Scroll đến cuối hỗ trợ lazy loading
+  Nếu nhiều cbbox trong 1 trang -> tự đóng khi mở cái mới -->
 <template>
   <div class="base-combobox" ref="wrapperRef">
     <label v-if="label" class="base-combobox-label" :style="{ minWidth: labelWidth, width: labelWidth }">
@@ -20,11 +28,13 @@
       </div>
       
       <!-- Dropdown Popup -->
+       <!-- Dùng mousedown vì thứ tự chạy của trình duyệt sẽ chạy trước click -->
       <Transition name="fade-slide">
         <ul v-if="isOpen" class="base-combobox-dropdown shadow-box" @scroll="handleScroll">
           <li v-if="filteredOptions.length === 0" class="base-combobox-empty">
             Không có dữ liệu để hiển thị
           </li>
+          
           <li 
             v-else
             v-for="opt in filteredOptions" 
@@ -44,7 +54,6 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-
 const props = defineProps({
   modelValue: {
     type: [String, Number],
@@ -96,17 +105,18 @@ watch(() => props.modelValue, (newVal) => {
     inputValue.value = ''
   }
 }, { immediate: true })
-
+// Hàm computed phụ thuộc vào inputValue và props.options khi các giá trị này thay đổi sẽ tính toán lại filteredOptions
 const filteredOptions = computed(() => {
+  // Không có text tìm kiếm thì trả lại list options
   if (!inputValue.value) return props.options
   
-  // Nếu Text Input đang khớp chuẩn với Option đang chọn thì hiển thị toàn list (Trường hợp vừa click chọn)
   const selectedOpt = props.options.find(o => o.value === props.modelValue)
+  // User mới chỉ chọn chưa gõ tìm kiếm gì
   if (selectedOpt && selectedOpt.label === inputValue.value) {
     return props.options
   }
 
-  // Filter case-insensitive
+  // Filter theo input value
   const query = inputValue.value.toLowerCase().trim()
   return props.options.filter(opt => opt.label.toLowerCase().includes(query))
 })
@@ -142,8 +152,10 @@ const closePopup = () => {
 }
 
 const handleInput = () => {
+  debugger;
   if (props.disabled) return
   if (!isOpen.value) {
+    // Bắn custom event lên
     window.dispatchEvent(new CustomEvent('close-all-comboboxes'))
   }
   isOpen.value = true
@@ -155,9 +167,11 @@ const selectOption = (opt) => {
   emit('update:modelValue', opt.value)
   isOpen.value = false
 }
-
+// Document listener gọi hàm
 const handleClickOutside = (e) => {
+  // Click vào phần tử không trong component đang thao tác
   if (wrapperRef.value && !wrapperRef.value.contains(e.target)) {
+    // Gọi hàm close
     closePopup()
   }
 }
@@ -174,9 +188,12 @@ const closeComboboxEvent = () => {
 }
 
 onMounted(() => {
+  // Lắng nghe sự kiện click ra bên ngoài
   document.addEventListener('mousedown', handleClickOutside)
+  // Lắng nghe xem có cb bõ nào khác đang mở không
   window.addEventListener('close-all-comboboxes', closeComboboxEvent)
 })
+// Unmounted để khi component destroy listener không còn treo trên document
 onUnmounted(() => {
   document.removeEventListener('mousedown', handleClickOutside)
   window.removeEventListener('close-all-comboboxes', closeComboboxEvent)

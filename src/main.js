@@ -6,6 +6,8 @@ import { createPinia } from 'pinia'
 import App from '@/App.vue'
 
 import router from './router'
+// Import css
+import './assets/PrismExcelTheme.css'
 import BaseFormLayout from './components/base/BaseFormLayout.vue'
 import BaseButton from '@/components/base/baseButton/BaseButton.vue'
 import BaseSelectBox from '@/components/base/baseInput/BaseSelectBox.vue'

@@ -1,0 +1,10 @@
+/* Biến: PHU_CAP_01, THU_NHAP_CHIU_THUE */
+.token.variable    { color: #2900ff; }
+/* Chuỗi: "text" */
+.token.string      { color: #a31515; }
+/* Số: 100, 0.5 */
+.token.number      { color: #000000; }
+/* Toán tử: + - * / */
+.token.operator    { color: #ff0000;}
+/* Dấu ngoặc: ( ) , ; */
+.token.punctuation { color: #ff0000; }

@@ -25,26 +25,27 @@
         placeholder="Tất cả đơn vị"  
       />
       
-      <GridData :columns="tableColumns" :data="tableData" :actionButtons="actionButtons">
-        
-        <template #valueExpressionTemplate="{ value }">
-          <prism-editor 
-            class="excel-formula-editor" 
-            :modelValue="value || ''" 
-            :highlight="highlighter" 
-            :readonly="true" 
-          />
-        </template>
+            <GridData :columns="tableColumns" :data="tableData" :actionButtons="actionButtons">
+            
+            <template #valueExpressionTemplate="{ value }">
+              <prism-editor 
+                class="excel-formula-editor" 
+                :modelValue="value || ''" 
+                :highlight="highlighter" 
+                :readonly="true" 
+              />
+            </template>
 
-        <template #statusTemplate="{ value }">
-           <span v-if="value == 1" style="color: #00a85a; display: flex; align-items: start; gap: 4px;">
-             Đang theo dõi
-           </span>
-           <span v-else style="color: #ff9800; display: flex; align-items: start; gap: 4px;">
-             Ngừng theo dõi
-           </span>
-        </template>
-      </GridData>
+            <template #statusTemplate="{ value }">
+              <span v-if="value == 1" style="color: #00a85a; display: flex; align-items: start; gap: 4px;">
+                Đang theo dõi
+              </span>
+              <span v-else style="color: #ff9800; display: flex; align-items: start; gap: 4px;">
+                Ngừng theo dõi
+              </span>
+            </template>
+          </GridData>
+      
       <GridDataFooter 
         v-model:currentPage="currentPage"
         v-model:pageSize="pageSize"
@@ -66,12 +67,10 @@ import BaseButton from '@/components/base/baseButton/BaseButton.vue'
 import GridDataFooter from '@/components/base/baseGridData/GridDataFooter.vue'
 import SalaryCompositionForm from './salaryCompositionForm.vue'
 // Import cho Prism Editor
+import { highlight } from 'prismjs/components/prism-core'
+import Prism from '../../utils/prismExcel.js'
 import { PrismEditor } from 'vue-prism-editor'
 import 'vue-prism-editor/dist/prismeditor.min.css'
-import { highlight, languages } from 'prismjs/components/prism-core'
-import 'prismjs/components/prism-clike'
-import 'prismjs/components/prism-javascript'
-import 'prismjs/themes/prism.css'
 
 import enumService from '@/services/enumService'
 import organizationService from '@/services/organizationService'
@@ -80,7 +79,7 @@ import salaryCompositionService from '@/services/salaryCompositionService'
 // Hàm highlight syntax cho Prism
 const highlighter = (code) => {
   if (!code) return '';
-  return highlight(code, languages.js); 
+  return highlight(code, Prism.languages.excel, 'excel'); 
 };
 const router = useRouter();
 // -- Toolbar states --
@@ -252,15 +251,12 @@ const goToSystemList = () => {
   font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
   font-size: 13px;
   max-height: 100px;
-  white-space: pre-wrap;
-  word-break: break-all;
 }
-
-:deep(.prism-editor__textarea) {
+// Đồng bộ style của texarea và editor do cơ chế của prism
+:deep(.prism-editor__textarea),
+:deep(.prism-editor__editor) {
+  font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace !important;
   outline: none !important;
 }
 
-:deep(.prism-editor__editor) {
-  white-space: pre-wrap !important;
-}
 </style>
