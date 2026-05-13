@@ -25,7 +25,7 @@
         placeholder="Tất cả đơn vị"  
       />
       
-            <GridData :columns="tableColumns" :data="tableData" :actionButtons="actionButtons">
+          <GridData :columns="tableColumns" :data="tableData" :actionButtons="actionButtons">
             
             <template #valueExpressionTemplate="{ value }">
               <prism-editor 
@@ -45,6 +45,7 @@
               </span>
             </template>
           </GridData>
+          
       
       <GridDataFooter 
         v-model:currentPage="currentPage"
@@ -227,6 +228,7 @@ const goToSystemList = () => {
 <style lang="scss" scoped>
 .salary_composition_layout {
   height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background-color: #f4f5f8;
