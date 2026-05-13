@@ -1,8 +1,8 @@
 <template>
   <div class="base-input-wrapper">
     <label v-if="label" class="base-input-label"
-    :style="{ width: labelWidth }">
-     <b>{{ label }}</b> <span v-if="required" class="required">*</span>
+    :style="{ minWidth: labelWidth, width: labelWidth }">
+      <b>{{ label }}</b> <span v-if="required" class="required">*</span>
     </label>
     <div class="base-input-container"
     :style="{ width: inputWidth }">
@@ -60,13 +60,15 @@ defineEmits(['update:modelValue'])
   display: flex;
   align-items: center;
   width: 100%;
-  margin-bottom: 16px;
 }
 
 .base-input-label {
   font-size: 14px;
   color: #212121;
   padding-right: 8px;
+  height: 36px;
+  display: flex;
+  align-items: center;
 }
 
 .required {

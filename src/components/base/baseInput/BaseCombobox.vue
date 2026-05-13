@@ -1,10 +1,10 @@
 <template>
   <div class="base-combobox" ref="wrapperRef">
-    <label v-if="label" class="base-combobox-label">
-      {{ label }} <span v-if="required" class="required">*</span>
+    <label v-if="label" class="base-combobox-label" :style="{ minWidth: labelWidth, width: labelWidth }">
+      <b>{{ label }}</b> <span v-if="required" class="required">*</span>
     </label>
     
-    <div class="base-combobox-container" :class="{ 'focused': isOpen, 'disabled': disabled }">
+    <div class="base-combobox-container" :class="{ 'focused': isOpen, 'disabled': disabled }" :style="{ width: inputWidth }">
       <input
         type="text"
         class="base-combobox-input"
@@ -16,7 +16,7 @@
       />
       <!-- MISA often uses icon_down for dropdowns -->
       <div class="base-combobox-btn" @click="togglePopup">
-        <div class="icon_down" :class="{ 'rotate-180': isOpen }"></div>
+        <div class="icon_chervon_down"></div>
       </div>
       
       <!-- Dropdown Popup -->
@@ -69,6 +69,14 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  labelWidth: {
+    type: String,
+    default: ''
+  },
+  inputWidth: {
+    type: String,
+    default: ''
   }
 })
 
@@ -180,16 +188,18 @@ onUnmounted(() => {
 
 .base-combobox {
   display: flex;
-  flex-direction: column;
-  gap: 8px; /* Khoảng cách từ label xuống input */
-  width: 100%;
+  align-items: center;
   position: relative;
 }
 
 .base-combobox-label {
   font-size: 14px;
-  font-weight: 500;
-  color: #1e2633;
+  color: #212121;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  height: 36px;
+  padding-right: 8px;
 }
 
 .required {
@@ -197,6 +207,7 @@ onUnmounted(() => {
 }
 
 .base-combobox-container {
+  position: relative;
   width: 100%;
   height: 36px;
   border: 1px solid $border-gray;
@@ -208,11 +219,11 @@ onUnmounted(() => {
   box-sizing: border-box;
   
   &:hover {
-    border-color: $primary-blue;
+    border-color: $primary-green;
   }
   
   &.focused {
-    border-color: $primary-blue;
+    border-color: $primary-green;
   }
   
   &.disabled {
@@ -222,12 +233,12 @@ onUnmounted(() => {
 }
 
 .base-combobox-input {
+  padding: 0 12px;
   flex: 1;
   min-width: 0;
   height: 100%;
   border: none;
   background: transparent;
-  padding: 0 12px;
   font-size: 14px;
   color: #111;
   outline: none;
@@ -258,10 +269,6 @@ onUnmounted(() => {
 .icon_down {
   transition: transform 0.2s;
 }
-.icon_down.rotate-180 {
-  transform: rotate(180deg);
-}
-
 /* Dropdown List */
 .base-combobox-dropdown {
   position: absolute;
@@ -297,12 +304,12 @@ onUnmounted(() => {
 
 .base-combobox-item:hover,
 .base-combobox-item.highlighted {
-  background-color: #e5efff;
+  background-color: $primary-background;
 }
 
 .base-combobox-item.selected {
-  background-color: #e5efff;
-  color: $primary-blue;
+  background-color: $primary-background;
+  color: $primary-green;
 }
 
 .base-combobox-empty {

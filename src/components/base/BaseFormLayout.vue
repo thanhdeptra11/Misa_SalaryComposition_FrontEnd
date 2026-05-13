@@ -47,6 +47,7 @@ defineEmits(['back'])
         display: flex;
         flex-direction: column;
         height: 100vh;
+        overflow: hidden    ;
         background: #f1f2f1;
         &__header{
             display: flex;
@@ -87,17 +88,19 @@ defineEmits(['back'])
             }
         }
         &__body{
-            flex: 1;
-            overflow-y: auto;
+            height: calc(-132px + 100vh);
+            min-height: 0 !important;
+            overflow: auto;
             display: flex;
             flex-direction: column;
             
             .body_content{
                 background-color: #fff;
-                min-height: 100%;
+                min-height: 100%;   
                 border-radius: 4px;
                 box-shadow: 0 1px 4px rgba(0,0,0,0.05);
                 padding: 40px;
+                flex-shrink: 0;
             }
         }
         &_footer{

@@ -3,7 +3,7 @@
   <div class="salary_composition_layout" v-if="!isShowingForm">
     <Header class="header" title="Thành phần lương">
       <template #right>
-        <BaseButton variant="primary" iconClass="icon_scale" buttonText="Danh mục của hệ thống" />
+        <BaseButton @click="goToSystemList" variant="primary" iconClass="icon_scale" buttonText="Danh mục của hệ thống" />
         <BaseButton 
           variant="mixed" 
           iconClass="icon_add" 
@@ -58,6 +58,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import Header from '@/components/mainViewComponents/Header.vue'
 import GridDataToolbar from '@/components/base/baseGridData/GridDataToolbar.vue'
 import GridData from '@/components/base/baseGridData/GridData.vue'
@@ -81,12 +82,13 @@ const highlighter = (code) => {
   if (!code) return '';
   return highlight(code, languages.js); 
 };
-
+const router = useRouter();
 // -- Toolbar states --
 const currentStatus = ref('');
 const currentUnit = ref([]);
 const statusOptions = ref([]);
 const unitOptions = ref([]);
+
 
 const fetchStatusOptions = async () => {
   try {
@@ -181,7 +183,7 @@ const fetchGridData = async () => {
       searchTerm: "",
       filters: []
     };
-    const res = await salaryCompositionService.filter(payload);
+    const res = await salaryCompositionService.getPaging(payload);
     // Giả sử res trả về data.data theo cấu trúc đã cung cấp
     if (res && res.data) {
       // res.data có thể là mảng trực tiếp hoặc nằm trong res.data.data
@@ -215,6 +217,11 @@ const handleMainClick = () => {
 // Xử lý khi click vào phần mũi tên (dropdown)
 const handleDropdownClick = () => {
   console.log('Dropdown clicked: Mở menu hành động');
+};
+
+// Xử lí chuyển sang danh mục hệ thống
+const goToSystemList = () => {
+  router.push('/payroll/salarycomposition/system-category');
 };
 </script>
 

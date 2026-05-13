@@ -10,6 +10,7 @@
       :placeholder="placeholder"
       field-template="customField"
       content-template="content"
+      :width="dropDownBoxWidth"
       @value-changed="syncTreeViewSelection"
     >
       <template #customField="{ data }">
@@ -93,6 +94,10 @@ const props = defineProps({
   placeholder: {
     type: String,
     default: ''
+  },
+  dropDownBoxWidth: {
+    type: String,
+    default: '250px'
   }
 });
 
@@ -374,13 +379,11 @@ const treeViewItemSelectionChanged = (e) => {
 
 /* Áp dụng SVG Mask trực tiếp, dùng !important để tránh DevExtreme đè lại khi hover */
 :deep(.dx-dropdowneditor-icon) {
-  width: 16px !important;
-  height: 16px !important;
-  min-width: 16px !important;
-  -webkit-mask-repeat: no-repeat !important;
-  background-color: #7a8188 !important; /* Dùng màu xám chuẩn, cấm hover đổi màu */
-  -webkit-mask-image: url('@/assets/ICON.svg') !important;
-  -webkit-mask-position: -32px -48px !important;
+  width: 20px !important;
+  height: 20px !important;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg) !important;
+  -webkit-mask-position: -100px 0 !important;
+  background-color: #6e737a !important;
 }
 
 /* Khóa luôn việc DevExtreme tự động đổi màu background của icon khi hover */
