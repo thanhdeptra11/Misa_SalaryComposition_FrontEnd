@@ -102,22 +102,29 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
-
+// Biến lưu các tree item được chọn
 const treeBoxValue = ref([...props.modelValue]);
+// Biến lưu trạng thái mở/đóng của dropdown
 const isTreeBoxOpened = ref(false);
+// Ref cho treeview
 const treeViewRef = ref(null);
 
+// Watch khi modelValue thay đổi
 watch(() => props.modelValue, (newVal) => {
+  // Nếu giá trị mới và giá trị hiện tại khác nhau
   if (JSON.stringify(newVal) !== JSON.stringify(treeBoxValue.value)) {
     treeBoxValue.value = [...newVal];
   }
 });
 
+// Watch khi treeBoxValue thay đổi
 watch(treeBoxValue, (newVal) => {
   emit('update:modelValue', newVal);
 });
 
+// Đồng bộ treeview với treeBoxValue
 const syncTreeViewSelection = () => {
+  debugger;
   const treeView = treeViewRef.value?.instance;
   if (!treeView) return;
 
@@ -136,6 +143,7 @@ watch(() => props.customDataSource, () => {
   isTreeExpanded.value = false;
 }, { deep: true });
 
+// TreeView đã load xong nội dung, tự động expand tất cả các node
 const treeViewContentReady = (e) => {
   if (!e.component) return;
   
@@ -155,15 +163,17 @@ const treeViewContentReady = (e) => {
    --------------------------------------------------- */
 const displayTags = computed(() => {
   if (!treeBoxValue.value || treeBoxValue.value.length === 0) return [];
-  
+  // Tất cả id đang chọn
   const selectedSet = new Set(treeBoxValue.value);
   const result = [];
   
   for (const id of treeBoxValue.value) {
     const item = props.customDataSource.find(x => x.id === id);
     if (item) {
-      
-      const parentId = item[props.parentIdExpr];
+      // Lấy tên của parentId
+      // Chỉ hiểu thị nếu parentId === rootId hoặc parentId không tồn tại trong selectedSet 
+      // (tức là node cha của nó không được chọn)
+      const parentId = item[props.parentIdExpr]; 
       if (!parentId || parentId === props.rootValue || !selectedSet.has(parentId)) {
         result.push({ id: item.id, text: item[props.displayExpr] });
       }
@@ -171,25 +181,28 @@ const displayTags = computed(() => {
   }
   return result;
 });
-
+// Lấy mảng từ dissPlayTags truyền vào TagBox
 const displayTagIds = computed(() => {
   return displayTags.value.map(tag => tag.id);
 });
-
+// Xử lý khi remove item trong TagBox
 const removeSelectedItem = (id) => {
   const treeView = treeViewRef.value?.instance;
   if (treeView) {
-    treeView.unselectItem(id); // Sẽ tự động unselect luôn cả các con của nó
+    treeView.unselectItem(id); // Của sẵn DevExtreme 
   } else {
+    // Lấy những phần tử khác với id truyền vào
     treeBoxValue.value = treeBoxValue.value.filter(val => val !== id);
   }
 };
+// Bắt sự kiện khi tag bị xóa
 const onTagBoxValueChanged = (e) => {
   // Lấy ra các tagbox bị remove
   const removedIds = e.previousValue.filter(id => !e.value.includes(id));
   // Loại bỏ item đó ra khỏi cây
   removedIds.forEach(id => removeSelectedItem(id));
 };
+// Bắt sự kiện khi check uncheck item trong treeview
 const treeViewItemSelectionChanged = (e) => {
   const treeView = e.component;
   const selectedNodes = treeView.getSelectedNodes();

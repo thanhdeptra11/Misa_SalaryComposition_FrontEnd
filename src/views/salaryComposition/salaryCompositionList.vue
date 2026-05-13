@@ -16,14 +16,21 @@
 
     <div class="table_container">
       <GridDataToolbar 
+        :searchResults="searchResults"
         class="tool_bar"
         @search="handleSearch"
+        @selectSearchItem="handleSelectSearchItem"
         v-model:statusFilterValue="currentStatus"
         v-model:unitFilterValue="currentUnit"
         :statusOptions="statusOptions"
         :unitOptions="unitOptions"
         placeholder="Tất cả đơn vị"  
-      />
+        labelKey="compositionName"
+      >
+        <template #search-item="{ item }">
+          <span>{{ item.compositionCode + ' - ' + item.compositionName }}</span>
+        </template>
+      </GridDataToolbar>
       
           <GridData :columns="tableColumns" :data="tableData" :actionButtons="actionButtons">
             
@@ -123,15 +130,15 @@ const fetchUnitOptions = async () => {
 const tableColumns = ref([
   { field: 'compositionCode', title: 'Mã thành phần', width: 200, fixed: true },
   { field: 'organizationName', title: 'Đơn vị áp dụng', width: 250 },
-  { field: 'compositionType', title: 'Loại thành phần', width: 200 },
-  { field: 'property', title: 'Tính chất', width: 150 },
-  { field: 'taxableType', title: 'Chịu thuế', width: 150 },
+  { field: 'compositionTypeDescription', title: 'Loại thành phần', width: 200 },
+  { field: 'propertyDescription', title: 'Tính chất', width: 150 },
+  { field: 'taxableTypeDescription', title: 'Chịu thuế', width: 150 },
   { field: 'taxDeductionType', title: 'Giảm trừ khi tính thuế', width: 200 },
   { field: 'norm', title: 'Định mức', width: 150 },
-  { field: 'valueType', title: 'Kiểu giá trị', width: 150 },
+  { field: 'valueTypeDescription', title: 'Kiểu giá trị', width: 150 },
   { field: 'valueExpression', title: 'Giá trị', width: 250, cellTemplate: 'valueExpressionTemplate' },
   { field: 'description', title: 'Mô tả', width: 250 },
-  { field: 'showOnPayslip', title: 'Hiển thị trên phiếu lương', width: 200 },
+  { field: 'showOnPayslipDescription', title: 'Hiển thị trên phiếu lương', width: 200 },
   { field: 'creationSource', title: 'Nguồn tạo', width: 150 },
   { field: 'status', title: 'Trạng thái', width: 150, cellTemplate: 'statusTemplate' },
   { field: 'compositionName', title: 'Tên thành phần', width: 250 }
@@ -142,6 +149,10 @@ const tableData = ref([]);
 const totalRecords = ref(0);
 const currentPage = ref(1);
 const pageSize = ref(15);
+// State lưu keyword
+const searchTerm = ref('');
+// State cho searchDropdown
+const searchResults = ref([]);
 const actionButtons = [
   {
     hint: 'Ngừng theo dõi',
@@ -180,7 +191,7 @@ const fetchGridData = async () => {
     const payload = {
       pageNumber: currentPage.value,
       pageSize: pageSize.value,
-      searchTerm: "",
+      searchTerm: searchTerm.value,
       filters: []
     };
     const res = await salaryCompositionService.getPaging(payload);
@@ -205,8 +216,32 @@ onMounted(() => {
   fetchGridData();
 });
 
-const handleSearch = (keyword) => {
-  console.log("Tìm kiếm:", keyword);
+const handleSearch = async (searchTerm) => {
+
+  if (!searchTerm?.trim()) {
+    searchResults.value = []
+    fetchGridData();
+    return
+  }
+
+  try {
+    const payload = {
+      pageNumber: 1,
+      pageSize: 15,
+      searchTerm: searchTerm.value,
+      filters: []
+    }
+
+    const res = await salaryCompositionService.getPaging(payload)
+
+    searchResults.value =
+      Array.isArray(res.data)
+        ? res.data
+        : (res.data?.data || [])
+
+  } catch (error) {
+    console.error(error)
+  }
 };
 
 // Xử lý khi click vào phần chính của button (bên trái mũi tên)
@@ -223,6 +258,14 @@ const handleDropdownClick = () => {
 const goToSystemList = () => {
   router.push('/payroll/salarycomposition/system-category');
 };
+// Xử lí khi chọn 1 item từ search
+const handleSelectSearchItem = (item) => {
+  searchResults.value = []
+
+  tableData.value = [item]
+
+  totalRecords.value = 1
+}
 </script>
 
 <style lang="scss" scoped>

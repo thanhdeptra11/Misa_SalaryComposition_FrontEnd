@@ -195,7 +195,7 @@ import { DxTooltip } from 'devextreme-vue';
 // ========================
 // Services
 import organizationService from '@/services/organizationService';
-import constantStringService from '@/services/constantStringService';
+import enumService from '@/services/enumService';
 import salaryCompositionService from '@/services/salaryCompositionService';
 import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
 // ========================
@@ -306,11 +306,11 @@ const handleSave = async () => {
 // Onmounted
 onMounted(() => {
     fetchUnitOptions();
-    constantStringService.fetchCbBoxOptions('CompositionType', typeOptions);
-    constantStringService.fetchCbBoxOptions('CompositonProperty', propertyOptions);
-    constantStringService.fetchCbBoxOptions('TaxAppliedType', taxAppliedTypes);
-    constantStringService.fetchCbBoxOptions('MiValueType', valueTypeOptions);
-    constantStringService.fetchCbBoxOptions('DisplayPayrollType', displayPayrollTypeOptions);
+    enumService.fetchCbBoxOptions('CompositionType', typeOptions);
+    enumService.fetchCbBoxOptions('CompositonProperty', propertyOptions);
+    enumService.fetchCbBoxOptions('TaxAppliedType', taxAppliedTypes);
+    enumService.fetchCbBoxOptions('MiValueType', valueTypeOptions);
+    enumService.fetchCbBoxOptions('DisplayPayrollType', displayPayrollTypeOptions);
 })
 </script>
 <style lang="scss" scoped>

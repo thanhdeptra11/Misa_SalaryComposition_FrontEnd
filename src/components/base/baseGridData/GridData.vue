@@ -97,6 +97,7 @@ const columnsWithTemplates = computed(() => {
 });
 
 const onRowClick = (e) => {
+  debugger
   emit('rowClick', e.data);
 };
 </script>

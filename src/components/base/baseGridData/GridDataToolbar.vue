@@ -2,12 +2,18 @@
   <div class="grid_data_toolbar">
     <div class="toolbar-left">
       <BaseHeaderSearch 
+        :results="props.searchResults"
         variant="table" 
         placeholder="Tìm kiếm" 
+        :labelKey = "props.labelKey"
         @search="$emit('search', $event)" 
-      />
+        @selectSearchItem = "$emit('selectSearchItem', $event)"
+      >
+        <template #search-item="{ item }">
+          <slot name="search-item" :item="item" />
+        </template>
+      </BaseHeaderSearch>
     </div>
-    
     <div class="toolbar-right">
       <slot name="right-actions">
         <!-- Default items if nothing is passed -->
@@ -17,7 +23,9 @@
           :options="statusOptions"
           variant="borderless"
           placeholder="Tất cả trạng thái"
-        />
+        >
+        </BaseDropdown>
+       
         
         <BaseHierachyTree 
           v-if="showUnitFilter"
@@ -50,6 +58,7 @@ const props = defineProps({
   showUnitFilter: { type: Boolean, default: true },
   showFilterBtn: { type: Boolean, default: true },
   showSettingBtn: { type: Boolean, default: true },
+  labelKey: { type: String, default: '' },
   
   // Options for dropdowns
   statusOptions: { 
@@ -63,11 +72,14 @@ const props = defineProps({
   placeholder: { 
     type: String, 
     default: '' 
+  },
+  searchResults: { 
+    type: Array, 
+    default: () => [] 
   }
 })
 
-const emit = defineEmits(['search', 'update:statusFilterValue', 'update:unitFilterValue'])
-
+const emit = defineEmits(['search','selectSearchItem', 'update:statusFilterValue', 'update:unitFilterValue'])
 const internalStatus = ref(props.statusFilterValue || (props.statusOptions && props.statusOptions[0]?.value) || '')
 const internalUnit = ref(Array.isArray(props.unitFilterValue) ? props.unitFilterValue : [])
 
