@@ -11,6 +11,9 @@
       field-template="customField"
       content-template="content"
       :width="dropDownBoxWidth"
+      :drop-down-options="{ 
+        wrapperAttr: { class: 'tree-popup' } 
+      }" 
       @value-changed="syncTreeViewSelection"
     >
       <template #customField="{ data }">
@@ -33,8 +36,21 @@
          :show-drop-down-button="false"
          :open-on-field-click="false"
          :search-enabled="false"
+         :max-displayed-tags="2"
+         :show-multi-tag-only="false"
+         :multiline="false"
+         tag-template="tagTemplate"
+         @multi-tag-preparing="onMultiTagPreparing"
          @value-changed="onTagBoxValueChanged"
-       />
+       >
+        <template #tagTemplate="{ data }">
+            <div class="misa-tree-tag-content" :title="data.text">
+              <span class="misa-tree-tag-text">{{ data.text }}</span>
+              <div class="dx-tag-remove-button"></div>
+            </div>
+          </template>
+
+      </DxTagBox>
       </template>
 
       <template #content="{ data }">
@@ -56,7 +72,8 @@
           :search-editor-options="{ placeholder: 'Tìm kiếm' }"
           @content-ready="treeViewContentReady"
           @item-selection-changed="treeViewItemSelectionChanged"
-        />
+        >
+        </DxTreeView>
       </template>
     </DxDropDownBox>
   </div>
@@ -209,6 +226,10 @@ const treeViewItemSelectionChanged = (e) => {
   // Chỉ lấy ID của các nodes được check
   treeBoxValue.value = selectedNodes.map(node => node.key);
 };
+// Lấy số lượng item nếu nhiều hơn 2 item
+const onMultiTagPreparing = (e) => {
+  e.text = `+${e.selectedItems.length}`;
+};
 </script>
 <!-- Bỏ scoped đoạn này vì Treeview bị đẩy ra khỏi phạm vi body -->
 <style lang="scss">
@@ -219,11 +240,19 @@ const treeViewItemSelectionChanged = (e) => {
    CUSTOM SEARCH BOX BÊN TRONG TREEVIEW (GIỐNG HÌNH 2)
    --------------------------------------------------- */
 /* Bo góc và đổi viền xanh lá khi focus/hover cho ô tìm kiếm */
+
 .custom-misa-treeview .dx-treeview-search {
   border-radius: 4px;
   height: 36px;
   border: 1px solid #dddde4;
 }
+.dx-treeview-expander-icon-stub{
+  display: none;  
+}
+.tree-popup .dx-overlay-content.dx-state-focused{
+  border: transparent;
+}
+
 .custom-misa-treeview .dx-treeview-search.dx-state-hover,
 .custom-misa-treeview .dx-treeview-search.dx-state-focused,
 .custom-misa-treeview .dx-treeview-search.dx-state-active {
@@ -319,7 +348,25 @@ const treeViewItemSelectionChanged = (e) => {
   -webkit-mask-position: -100px -40px !important; /* Dự đoán tọa độ của dấu trừ, bạn có thể chỉnh lại cho đúng */
   transform: none !important;
 }
+// Căn vị trí các phần tử trong container Tagbox
+.dx-selectbox-container{
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.dx-dropdowneditor-input-wrapper{
+  display: flex;
+  align-items: center;
+}
+// Styles cho tagBox
+.dx-tag{
+  padding: 5px 23px 5px 5px !important;
+  margin: 0px !important;
 
+}
+.dx-texteditor{
+  align-self: center;
+}
 </style>
 
 <style lang="scss" scoped>

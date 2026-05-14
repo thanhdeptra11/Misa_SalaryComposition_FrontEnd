@@ -8,48 +8,56 @@
   Nếu nhiều cbbox trong 1 trang -> tự đóng khi mở cái mới -->
 <template>
   <div class="base-combobox" ref="wrapperRef">
-    <label v-if="label" class="base-combobox-label" :style="{ minWidth: labelWidth, width: labelWidth }">
+    <label v-if="label"  class="base-combobox-label" :style="{ minWidth: labelWidth, width: labelWidth }">
       <b>{{ label }}</b> <span v-if="required" class="required">*</span>
     </label>
-    
-    <div class="base-combobox-container" :class="{ 'focused': isOpen, 'disabled': disabled }" :style="{ width: inputWidth }">
-      <input
-        type="text"
-        class="base-combobox-input"
-        :placeholder="placeholder"
-        :disabled="disabled"
-        v-model="inputValue"
-        @focus="openPopup"
-        @input="handleInput"
-      />
-      <!-- MISA often uses icon_down for dropdowns -->
-      <div class="base-combobox-btn" @click="togglePopup">
-        <div class="icon_chervon_down"></div>
+    <div class="base-combobox-wrap">
+      <div class="base-combobox-container" 
+      :class="{ 'focused': isOpen, 'disabled': disabled, 'error': errorMessage }" 
+      :style="{ width: inputWidth }">
+        <input
+          type="text"
+          class="base-combobox-input" 
+          :placeholder="placeholder"
+          :disabled="disabled"
+          v-model="inputValue"
+          @focus="openPopup"
+          @input="handleInput"
+          @blur="$emit('blur')"
+        />
+        <!-- MISA often uses icon_down for dropdowns -->
+        <div class="base-combobox-btn" @click="togglePopup">
+          <div class="icon_chervon_down"></div>
+        </div>
+        
+        <!-- Dropdown Popup -->
+        <!-- Dùng mousedown vì thứ tự chạy của trình duyệt sẽ chạy trước click -->
+        <Transition name="fade-slide">
+          <ul v-if="isOpen" class="base-combobox-dropdown shadow-box" @scroll="handleScroll">
+            <li v-if="filteredOptions.length === 0" class="base-combobox-empty">
+              Không có dữ liệu để hiển thị
+            </li>
+            
+            <li 
+              v-else
+              v-for="opt in filteredOptions" 
+              :key="opt.value" 
+              class="base-combobox-item"
+              :class="{ 'selected': opt.value === modelValue, 'highlighted': highlightedValue === opt.value }"
+              @mousedown.prevent="selectOption(opt)"
+              @mouseenter="highlightedValue = opt.value"
+            >
+              {{ opt.label }}
+            </li>
+          </ul>
+        </Transition>
       </div>
-      
-      <!-- Dropdown Popup -->
-       <!-- Dùng mousedown vì thứ tự chạy của trình duyệt sẽ chạy trước click -->
-      <Transition name="fade-slide">
-        <ul v-if="isOpen" class="base-combobox-dropdown shadow-box" @scroll="handleScroll">
-          <li v-if="filteredOptions.length === 0" class="base-combobox-empty">
-            Không có dữ liệu để hiển thị
-          </li>
-          
-          <li 
-            v-else
-            v-for="opt in filteredOptions" 
-            :key="opt.value" 
-            class="base-combobox-item"
-            :class="{ 'selected': opt.value === modelValue, 'highlighted': highlightedValue === opt.value }"
-            @mousedown.prevent="selectOption(opt)"
-            @mouseenter="highlightedValue = opt.value"
-          >
-            {{ opt.label }}
-          </li>
-        </ul>
-      </Transition>
+      <div v-if="errorMessage" class="base-combobox-error">
+          {{ errorMessage }}
+      </div>
     </div>
   </div>
+   
 </template>
 
 <script setup>
@@ -86,10 +94,14 @@ const props = defineProps({
   inputWidth: {
     type: String,
     default: ''
+  },
+  errorMessage: {
+    type: String,
+    default: ''
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'load-more'])
+const emit = defineEmits(['update:modelValue', 'load-more', 'blur'])
 
 const wrapperRef = ref(null)
 const isOpen = ref(false)
@@ -267,6 +279,9 @@ onUnmounted(() => {
   &:disabled {
     color: #999;
   }
+  &.error {
+    border-color: #ff6161;
+  }
 }
 
 .base-combobox-btn {
@@ -332,6 +347,14 @@ onUnmounted(() => {
 .base-combobox-empty {
   color: #666;
   text-align: left;
+}
+.base-combobox-container.error {
+  border-color: #ff6161;
+}
+.base-combobox-error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #ff6161;
 }
 
 /* Animations */

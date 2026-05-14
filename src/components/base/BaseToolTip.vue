@@ -24,11 +24,10 @@
 </script>
 <style lang="scss">
 .tooltip_custom.dx-overlay-content {
-  background-color: #454545 !important;
+  background-color: #34B057 !important;
   border: none !important;
   border-radius: 4px !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-
   .dx-popup-content {
     color: #ffffff !important;
     white-space: normal !important;

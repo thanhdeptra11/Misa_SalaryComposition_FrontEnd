@@ -33,6 +33,7 @@
           :custom-data-source="unitOptions"
           display-expr="organizationName"
           :placeholder="placeholder"
+          :dropDownBoxWidth="'370px'"
         />
         
         <BaseButton v-if="showFilterBtn" variant="icon-only" class="icon icon_filter" />

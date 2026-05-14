@@ -9,10 +9,15 @@
       <input
         :type="type"
         class="base-input-field"
+        :class="{ 'error': errorMessage }"
         :placeholder="placeholder"
         :value="modelValue"
         @input="$emit('update:modelValue', $event.target.value)"
+        @blur="$emit('blur')"
       />
+      <div v-if="errorMessage" class="base-input-error">
+        {{ errorMessage }}
+      </div>
     </div>
   </div>
 </template>
@@ -47,10 +52,14 @@ defineProps({
   inputWidth: {
     type: String,
     default: '100%'
+  },
+  errorMessage:{
+    type: String,
+    default: ''
   }
 })
 
-defineEmits(['update:modelValue'])
+defineEmits(['update:modelValue', 'blur'])
 </script>
 
 <style lang="scss" scoped>
@@ -72,7 +81,7 @@ defineEmits(['update:modelValue'])
 }
 
 .required {
-  color: #ff0000;
+  color: #ff6161;
 }
 
 .base-input-container {
@@ -100,4 +109,13 @@ defineEmits(['update:modelValue'])
     border-color: $primary-green;
   }
 }
+.base-input-field.error {
+  border-color: #ff6161;
+}
+.base-input-error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #ff6161;
+}
+
 </style>

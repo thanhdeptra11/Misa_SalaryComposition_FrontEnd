@@ -25,48 +25,61 @@
            <BaseInput 
            v-model="compositionName"  label="Tên thành phần" 
             labelWidth="180px" inputWidth="676px" required="true"
+             :error-message="errors.compositionName"
+              @blur="validateField('compositionName')"
+              @update:modelValue="handleFieldChange('compositionName')"
             />
          </div>
         <!-- Input nhập Mã thành phần -->
         <div class="composition_input">
           <BaseInput v-model="compositionCode"  label="Mã thành phần" placeholder="Nhập mã viết liền"
           labelWidth="180px" inputWidth="676px" required="true"
+          :error-message="errors.compositionCode"
+          @blur="validateField('compositionCode')"
+           
           />
         </div>
         <!-- Input chọn đơn vị áp dụng -->
          <div class="composition_input">
             <div class="label_container"><b>Đơn vị áp dụng</b></div>
             <BaseHierachyTree 
-            v-model="internalUnit"
+            v-model="compositionOrganization"
             :custom-data-source="unitOptions"
             display-expr="organizationName"
             :dropDownBoxWidth="676"
             />
          </div>
          <!-- Input nhập loại thành phần -->
-          <!-- v-model: input đang đọc và ghi dữ liệu vào biến internalType -->
+          <!-- v-model: input đang đọc và ghi dữ liệu vào biến compositionType -->
+           <!-- Dùng error thì khai báo khớp với tên các key trong ruleValidate -->
          <div class="composition_input">
            <BaseCombobox
-              v-model="internalType"
+              v-model="compositionType"
               :options="typeOptions"
               label="Loại thành phần"
               placeholder=""
               required="true"
               labelWidth="180px" 
               inputWidth="237px"
+              :errorMessage="errors.compositionType"
+              @blur="validateField('compositionType')"
+              @update:modelValue="handleFieldChange('compositionType')"
             />
          </div>
          <!-- Input chọn tính chất -->
           <div class="composition_input custom_radio_group_property">
            <BaseCombobox
               class="base_cb_box"
-              v-model="internalProperty"
+              v-model="compositionProperty"
               :options="propertyOptions"
               label="Tính chất"
               placeholder=""
               required="true"
               labelWidth="180px" 
               inputWidth="237px"
+              :errorMessage="errors.compositionProperty"
+              @blur="validateField('compositionProperty')"
+              @update:modelValue="handleFieldChange('compositionProperty')"
             />
             <!-- Radio group chọn kiểu áp dụng thuế -->
             <BaseRadioGroup 
@@ -193,14 +206,16 @@ import BaseInput from '@/components/base/baseInput/BaseInput.vue';
 import BaseHierachyTree from '@/components/base/baseInput/BaseHierachyTree.vue';
 import { DxTooltip } from 'devextreme-vue';
 // ========================
-// Services
+// Services và js
 import organizationService from '@/services/organizationService';
 import enumService from '@/services/enumService';
 import salaryCompositionService from '@/services/salaryCompositionService';
 import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
+// import validator
+import { required, maxLength } from '@/utils/validator';
 // ========================
 // Import vue function
-import { ref } from 'vue';
+import { computed, ref, watch, reactive } from 'vue';
 import { onMounted } from 'vue';
 import BaseCombobox from '@/components/base/baseInput/BaseCombobox.vue';
 import BaseRadio from '@/components/base/baseInput/BaseRadio.vue';
@@ -252,11 +267,11 @@ const compositionCode = ref('');
 // Biến nhập Định mức
 const compositionNorm = ref('');
 // Biến selected đơn vị
-const internalUnit = ref([])
+const compositionOrganization = ref([])
 // Biến selected loại thành phần
-const internalType = ref([])
+const compositionType = ref([])
 // Biến selected tính chất
-const internalProperty = ref([])
+const compositionProperty = ref([])
 // Biến selected kiểu áp dụng thuế
 const internalTaxAppliedType = ref([])
 // Biến checked có cho phép giá trị vượt quá định mức
@@ -273,18 +288,128 @@ const salaryCompositionDescription = ref('')
 const displayPayroll = ref([])
 // Biến nguồn tạo
 const sourceOfCreation = ref('Tự thêm')
+// Biến reactive để validate
+const errors = reactive({})
+// Khởi tạo rule field trong rule phải khớp với resources
+const validationRules = {
+  compositionName: [
+    required('fields.salaryComposition.compositionName')
+  ],
+  compositionCode: [
+    required('fields.salaryComposition.compositionCode')
+  ],
+  compositionOrganization: [
+    required('fields.salaryComposition.compositionOrganization')
+  ],
+  compositionType: [
+    required('fields.salaryComposition.compositionType')
+  ],
+  compositionProperty: [
+    required('fields.salaryComposition.compositionProperty')
+  ],
+}
+// Lấy formvalue cần validate
+const formValidateValues = {
+  compositionName,
+  compositionCode,
+  compositionOrganization,
+  compositionType,
+  compositionProperty
+}
+// Validate từng field
+const validateField = (fieldName) => {
+  const rules = validationRules[fieldName] || [];
+  const value = formValidateValues[fieldName].value;
+
+  for (const rule of rules) {
+    const errorMessage = rule(value);
+
+    if (errorMessage) {
+      errors[fieldName] = errorMessage;
+      return false;
+    }
+  }
+
+  errors[fieldName] = '';
+  return true;
+};
+
+const validateForm = () => {
+  let isValid = true;
+
+  Object.keys(validationRules).forEach((fieldName) => {
+    const fieldValid = validateField(fieldName);
+
+    if (!fieldValid) {
+      isValid = false;
+    }
+  });
+
+  return isValid;
+};
+// Validate lại khi field có lỗi 
+const handleFieldChange = (fieldName) => {
+  if (errors[fieldName]) {
+    validateField(fieldName);
+  }
+};
+
+// Computed tính toán để chỉ lấy id các đơn vị cấp cao nhất
+const highestSelectedIds = computed(() => {
+  const selectedSet = new Set(compositionOrganization.value)
+
+  const orgMap = new Map(
+    unitOptions.value.map(org => [org.id, org])
+  )
+
+  return compositionOrganization.value.filter(id => {
+    const org = orgMap.get(id)
+
+    return org && !selectedSet.has(org.parentId)
+  })
+})
+// Biến flag lưu state current code
+const isCodeManuallyEdited = ref(false);
+const isAutoGenerating = ref(false);
+// Hàm xử lí sinh mã thành phần tự động
+const generateCompositionCode = (value) => {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_-]/g, '')
+    .toUpperCase();
+};
+
+watch(compositionCode, (newValue) => {
+  handleFieldChange('compositionCode');
+  if (isAutoGenerating.value) return;
+
+  isCodeManuallyEdited.value = !!newValue;
+},
+  { flush: 'sync' });
+
+// Xử lí gõ ô Tên thành phần thì tự sinh mã thành phần
+watch(compositionName, (newValue) => {
+  if (isCodeManuallyEdited.value) return;
+
+  isAutoGenerating.value = true;
+  compositionCode.value = generateCompositionCode(newValue);
+  isAutoGenerating.value = false;
+});
 
 // Hàm xử lí nút Lưu
 const handleSave = async () => {
+  if(!validateForm()) return;
   try {
   // Tạo payload
   const payload = {
-    organizationId: internalUnit.value[0],
+    organizationId: highestSelectedIds.value,
     systemCompositionId: null,
     compositionCode: compositionCode.value,
     compositionName: compositionName.value,
-    compositionType: internalType.value, 
-    property: internalProperty.value,
+    compositionType: compositionType.value, 
+    property: compositionProperty.value,
     taxableType: internalTaxAppliedType.value,
     taxDeductionType: "Không", // Backend yêu cầu truyền cứng
     norm: compositionNorm.value,
@@ -307,7 +432,7 @@ const handleSave = async () => {
 onMounted(() => {
     fetchUnitOptions();
     enumService.fetchCbBoxOptions('CompositionType', typeOptions);
-    enumService.fetchCbBoxOptions('CompositonProperty', propertyOptions);
+    enumService.fetchCbBoxOptions('CompositionProperty', propertyOptions);
     enumService.fetchCbBoxOptions('TaxAppliedType', taxAppliedTypes);
     enumService.fetchCbBoxOptions('MiValueType', valueTypeOptions);
     enumService.fetchCbBoxOptions('DisplayPayrollType', displayPayrollTypeOptions);
