@@ -124,7 +124,6 @@ watch(treeBoxValue, (newVal) => {
 
 // Đồng bộ treeview với treeBoxValue
 const syncTreeViewSelection = () => {
-  debugger;
   const treeView = treeViewRef.value?.instance;
   if (!treeView) return;
 

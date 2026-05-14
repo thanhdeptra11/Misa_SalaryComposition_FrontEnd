@@ -21,7 +21,7 @@
         @search="handleSearch"
         @selectSearchItem="handleSelectSearchItem"
         v-model:statusFilterValue="currentStatus"
-        v-model:unitFilterValue="currentUnit"
+        v-model:unitFilterValue="currentUnits"
         :statusOptions="statusOptions"
         :unitOptions="unitOptions"
         placeholder="Tất cả đơn vị"  
@@ -66,7 +66,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import Header from '@/components/mainViewComponents/Header.vue'
 import GridDataToolbar from '@/components/base/baseGridData/GridDataToolbar.vue'
@@ -80,6 +80,7 @@ import Prism from '../../utils/prismExcel.js'
 import { PrismEditor } from 'vue-prism-editor'
 import 'vue-prism-editor/dist/prismeditor.min.css'
 
+import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
 import enumService from '@/services/enumService'
 import organizationService from '@/services/organizationService'
 import salaryCompositionService from '@/services/salaryCompositionService'
@@ -91,12 +92,10 @@ const highlighter = (code) => {
 };
 const router = useRouter();
 // -- Toolbar states --
-const currentStatus = ref('');
-const currentUnit = ref([]);
+const currentStatus = ref(99);
+const currentUnits = ref([]);
 const statusOptions = ref([]);
 const unitOptions = ref([]);
-
-
 const fetchStatusOptions = async () => {
   try {
     const data = await enumService.getEnumByName('FollowStatus');
@@ -147,10 +146,6 @@ const tableColumns = ref([
 const tableData = ref([]);
 // Phân trang
 const totalRecords = ref(0);
-const currentPage = ref(1);
-const pageSize = ref(15);
-// State lưu keyword
-const searchTerm = ref('');
 // State cho searchDropdown
 const searchResults = ref([]);
 const actionButtons = [
@@ -186,59 +181,99 @@ const actionButtons = [
 // State trạng thái form
 const isShowingForm = ref(false);
 
-const fetchGridData = async () => {
+// Computed tính toán để chỉ lấy id các đơn vị cấp cao nhất
+const highestSelectedIds = computed(() => {
+  const selectedSet = new Set(currentUnits.value)
+
+  const orgMap = new Map(
+    unitOptions.value.map(org => [org.id, org])
+  )
+
+  return currentUnits.value.filter(id => {
+    const org = orgMap.get(id)
+
+    return org && !selectedSet.has(org.parentId)
+  })
+})
+// Watch để theo dõi gọi api để fetch lại dùng cho đơn vị
+watch(highestSelectedIds, async (newVals) => {
+  pagingPayload.pageNumber = 1
+  // Giữ filter trạng thái (nếu có), thay thế filter đơn vị
+  const statusFilter = pagingPayload.filters.filter(f => f.property === 'status')
+  pagingPayload.filters = [
+    ...statusFilter,
+    ...newVals.map(id => ({
+      dataType: "string",
+      value: id,
+      operator: "=",
+      property: "organization_id"
+    }))
+  ]
+  await fetchData()
+})
+
+// Nguồn sự thật duy nhất cho phân trang và filter
+const pagingPayload = reactive({
+  pageNumber: 1,
+  pageSize: 15,
+  searchTerm: "",
+  filters: []
+})
+
+// Computed để đồng bộ với GridDataFooter (v-model)
+const currentPage = computed({
+  get: () => pagingPayload.pageNumber,
+  set: (val) => { pagingPayload.pageNumber = val }
+})
+const pageSize = computed({
+  get: () => pagingPayload.pageSize,
+  set: (val) => {
+    pagingPayload.pageSize = val
+    pagingPayload.pageNumber = 1 // Reset về trang 1 khi đổi pageSize
+  }
+})
+
+// Hàm fetch duy nhất - luôn dùng pagingPayload
+const fetchData = async () => {
   try {
-    const payload = {
-      pageNumber: currentPage.value,
-      pageSize: pageSize.value,
-      searchTerm: searchTerm.value,
-      filters: []
-    };
-    const res = await salaryCompositionService.getPaging(payload);
-    // Giả sử res trả về data.data theo cấu trúc đã cung cấp
+    const res = await salaryCompositionService.getPaging({ ...pagingPayload })
     if (res && res.data) {
-      // res.data có thể là mảng trực tiếp hoặc nằm trong res.data.data
-      tableData.value = Array.isArray(res.data) ? res.data : (res.data.data || []);
-      totalRecords.value = res.totalRecords || 0;
+      tableData.value = Array.isArray(res.data) ? res.data : (res.data.data || [])
+      totalRecords.value = res.totalRecords || 0
     }
-  } catch(error) {
-    console.error("Lỗi khi lấy dữ liệu Grid:", error);
+  } catch (error) {
+    console.error("Lỗi khi lấy dữ liệu Grid:", error)
   }
 }
-// Gọi lại api khi thay đổi số trang hoặc bản ghi
-watch([currentPage, pageSize], () => {
-  fetchGridData();
+
+// Gọi lại api khi thay đổi trang hoặc số bản ghi/trang
+watch([() => pagingPayload.pageNumber, () => pagingPayload.pageSize], () => {
+  fetchData()
+})
+
+// Gọi api khi thay đổi giá trị trạng thái
+watch(currentStatus, (status) => {
+  handleFilterByStatus(status)
 })
 
 onMounted(() => {
   fetchStatusOptions();
   fetchUnitOptions();
-  fetchGridData();
+  fetchData();
 });
 
-const handleSearch = async (searchTerm) => {
-
-  if (!searchTerm?.trim()) {
+const handleSearch = async (keyword) => {
+  if (!keyword?.trim()) {
     searchResults.value = []
-    fetchGridData();
+    pagingPayload.searchTerm = ''
+    pagingPayload.pageNumber = 1
+    fetchData()
     return
   }
-
   try {
-    const payload = {
-      pageNumber: 1,
-      pageSize: 15,
-      searchTerm: searchTerm.value,
-      filters: []
-    }
-
-    const res = await salaryCompositionService.getPaging(payload)
-
-    searchResults.value =
-      Array.isArray(res.data)
-        ? res.data
-        : (res.data?.data || [])
-
+    // Tìm kiếm gợi ý (dropdown) dùng payload tạm, không ảnh hưởng phân trang
+    const res = await salaryCompositionService.getPaging({ ...pagingPayload, searchTerm: keyword, pageNumber: 1 })
+    searchResults.value = Array.isArray(res.data) ? res.data : (res.data?.data || [])
   } catch (error) {
     console.error(error)
   }
@@ -266,6 +301,27 @@ const handleSelectSearchItem = (item) => {
 
   totalRecords.value = 1
 }
+// Xử lí khi lọc theo trạng thái
+const handleFilterByStatus = async (status) => {
+  try {
+    pagingPayload.pageNumber = 1
+    if (status === GLOBAL_CONSTANTS.DEFAULT_STATUS_FILTER) {
+      // Xóa filter trạng thái, giữ lại các filter khác (đơn vị...)
+      pagingPayload.filters = pagingPayload.filters.filter(f => f.property !== 'status')
+    } else {
+      // Thay thế filter trạng thái hiện tại
+      const otherFilters = pagingPayload.filters.filter(f => f.property !== 'status')
+      pagingPayload.filters = [
+        ...otherFilters,
+        { dataType: 'int', value: status, operator: '=', property: 'status' }
+      ]
+    }
+    await fetchData()
+  } catch (error) {
+    console.error("Lỗi khi lọc theo trạng thái:", error)
+  }
+}
+
 </script>
 
 <style lang="scss" scoped>

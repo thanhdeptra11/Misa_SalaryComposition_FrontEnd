@@ -152,7 +152,7 @@ const closePopup = () => {
 }
 
 const handleInput = () => {
-  debugger;
+
   if (props.disabled) return
   if (!isOpen.value) {
     // Bắn custom event lên
