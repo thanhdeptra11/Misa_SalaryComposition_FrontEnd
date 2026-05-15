@@ -67,19 +67,38 @@
     </div>
   </div>
   <!-- Hiển thị form -->
-  <SalaryCompositionForm v-else @back="isShowingForm = false" @saved="handleFormSaved" />
+  <SalaryCompositionForm v-else
+  :mode="formMode"
+  :editing-item="editingItem"
+  @back="handleCloseForm"
+  @saved="handleFormSaved"
+  />
+  <BaseConfirmModal
+  v-model="isShowDeleteConfirmModal"
+  title="Thông báo"
+  :message="`Bạn có chắc chắn muốn xóa thành phần lương ${salaryCompositionToDelete?.compositionName || ''} không?`"
+  cancelText="Hủy"
+  confirmText="Xóa"
+  :showSecondary="false"
+  confirmButtonClass="delete-confirm-button"
+  width="500px"
+  @confirm="handleConfirmDelete"
+/>
+
   
 </template>
 
 <script setup>
 import { ref, onMounted, watch, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useToast } from '@/components/base/composables/useToast.js'
 import Header from '@/components/mainViewComponents/Header.vue'
 import GridDataToolbar from '@/components/base/baseGridData/GridDataToolbar.vue'
 import GridData from '@/components/base/baseGridData/GridData.vue'
 import BaseButton from '@/components/base/baseButton/BaseButton.vue'
 import GridDataFooter from '@/components/base/baseGridData/GridDataFooter.vue'
 import SalaryCompositionForm from './salaryCompositionForm.vue'
+import BaseConfirmModal from '@/components/base/baseModal/BaseConfirmModal.vue'
 // Import cho Prism Editor
 import { highlight } from 'prismjs/components/prism-core'
 import Prism from '../../utils/prismExcel.js'
@@ -96,6 +115,12 @@ const highlighter = (code) => {
   if (!code) return '';
   return highlight(code, Prism.languages.excel, 'excel'); 
 };
+const { showSuccess, showError } = useToast();
+// State modal xóa
+const isShowDeleteConfirmModal = ref(false);
+const salaryCompositionToDelete = ref(null);
+const isDeleting = ref(false);
+
 const router = useRouter();
 // -- Toolbar states --
 const currentStatus = ref(99);
@@ -119,6 +144,47 @@ const fetchStatusOptions = async () => {
     console.error("Lỗi khi lấy dữ liệu FollowStatus:", error);
   }
 };
+// Bấm icon trash mở modal
+const handleDelete = (row) => {
+  salaryCompositionToDelete.value = row;
+  isShowDeleteConfirmModal.value = true;
+};
+// Hàm xác nhận xóa
+const handleConfirmDelete = async () => {
+  if (isDeleting.value || !salaryCompositionToDelete.value) return;
+
+  const deleteId =
+    salaryCompositionToDelete.value.id ||
+    salaryCompositionToDelete.value.salaryCompositionId;
+
+  if (!deleteId) {
+    showError('Không tìm thấy bản ghi');
+    isShowDeleteConfirmModal.value = false;
+    return;
+  }
+
+  try {
+    isDeleting.value = true;
+
+    await salaryCompositionService.delete(deleteId);
+
+    showSuccess('Xóa thành công');
+
+    isShowDeleteConfirmModal.value = false;
+    salaryCompositionToDelete.value = null;
+
+    if (tableData.value.length === 1 && pagingPayload.pageNumber > 1) {
+      pagingPayload.pageNumber -= 1;
+    }
+
+    await fetchData();
+  } catch (error) {
+    console.error('Lỗi khi xóa thành phần lương:', error);
+    showError('Xóa thất bại');
+  } finally {
+    isDeleting.value = false;
+  }
+};
 
 const fetchUnitOptions = async () => {
   try {
@@ -131,12 +197,23 @@ const fetchUnitOptions = async () => {
   }
 };
 const handleFormSaved = async () => {
-  // Reset về trang đầu để bản ghi mới có khả năng xuất hiện ngay
+  // Sau khi thêm/sửa thành công thì đóng form
+  handleCloseForm();
+
+  // Reset về trang đầu để bản ghi mới/cập nhật dễ thấy hơn
   pagingPayload.pageNumber = 1;
 
   // Gọi lại API để lấy danh sách mới nhất
   await fetchData();
 };
+
+const handleCloseForm = () => {
+  // Đóng form và reset trạng thái về thêm mới
+  isShowingForm.value = false;
+  formMode.value = 'create';
+  editingItem.value = null;
+};
+
 // -- Table config --
 const tableColumns = ref([
   { field: 'compositionCode', title: 'Mã thành phần', width: 200, fixed: true },
@@ -160,33 +237,37 @@ const tableData = ref([]);
 const totalRecords = ref(0);
 // State cho searchDropdown
 const searchResults = ref([]);
+// State mode hiện tại của form
+const formMode = ref('create');
+// Dữ liệu dòng đang sửa, truyền xuống form để bind
+const editingItem = ref(null);
 const actionButtons = [
   {
     hint: 'Ngừng theo dõi',
     icon: 'icon_minus_yellow',
-    onClick: (e) => {
-      alert('Minus ' + e.row.data.compositionName)
+    onClick: (row) => {
+      alert('Minus ' + row.compositionName)
     }
   },
   {
     hint: 'Nhân bản',
     icon: 'icon_copy_primary',
-    onClick: (e) => {
-      alert('Clone ' + e.row.data.compositionName)
+    onClick: (row) => {
+      alert('Clone ' + row.compositionName)
     }
   },
   {
     hint: 'Sửa',
     icon: 'icon_pencil',
-    onClick: (e) => {
-      alert('Edit ' + e.row.data.compositionName)
+    onClick: (row) => {
+      handleEdit(row);
     }
   },
   {
     hint: 'Xóa',
     icon: 'icon_trash_red',
-    onClick: (e) => {
-      alert('Delete ' + e.row.data.compositionName)
+    onClick: (row) => {
+      handleDelete(row);
     }
   }
 ];
@@ -293,8 +374,23 @@ const handleSearch = async (keyword) => {
 
 // Xử lý khi click vào phần chính của button (bên trái mũi tên)
 const handleMainClick = () => {
+  // Mở form ở chế độ thêm mới
+  formMode.value = 'create';
+  editingItem.value = null;
   isShowingForm.value = true;
 };
+// Xử lí khi click vào nút thêm
+const handleEdit = (row) => {
+  // Lưu row đang sửa để form bind dữ liệu
+  editingItem.value = row;
+
+  // Đổi form sang chế độ sửa
+  formMode.value = 'edit';
+
+  // Hiển thị form
+  isShowingForm.value = true;
+};
+
 
 // Xử lý khi click vào phần mũi tên (dropdown)
 const handleDropdownClick = () => {
@@ -372,4 +468,18 @@ const handleFilterByStatus = async (status) => {
   outline: none !important;
 }
 
+</style>
+<style lang="scss" scoped>
+/* CSS hiện tại của màn list */
+</style>
+
+<style lang="scss">
+/* CSS global riêng cho nút xóa trong modal */
+.delete-confirm-button.base_button--secondary {
+  background-color: #E54848 !important;
+}
+
+.delete-confirm-button.base_button--secondary:hover {
+  background-color: #D93B3B !important;
+}
 </style>

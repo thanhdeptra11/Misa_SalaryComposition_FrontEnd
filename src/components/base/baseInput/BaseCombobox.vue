@@ -108,15 +108,53 @@ const isOpen = ref(false)
 const inputValue = ref('')
 const highlightedValue = ref(null)
 
-// Cập nhật text input khi modelValue từ ngoài truyền vào (hoặc thay đổi)
-watch(() => props.modelValue, (newVal) => {
-  const selectedOpt = props.options.find(o => o.value === newVal)
+const syncInputValue = () => {
+  // Khi options load async sau modelValue, cần sync lại label hiển thị
+  const selectedOpt = props.options.find((option) => {
+    return option.value === props.modelValue;
+  });
+
   if (selectedOpt) {
-    inputValue.value = selectedOpt.label
-  } else {
-    inputValue.value = ''
+    inputValue.value = selectedOpt.label;
+    return;
   }
-}, { immediate: true })
+
+  // Nếu không có modelValue thì clear text hiển thị
+  if (props.modelValue === null || props.modelValue === undefined || props.modelValue === '') {
+    inputValue.value = '';
+  }
+};
+
+watch(
+  () => [props.modelValue, props.options],
+  () => {
+    syncInputValue();
+  },
+  {
+    immediate: true,
+    deep: true
+  }
+);
+
+/* Cập nhật text input khi modelValue từ ngoài truyền vào (hoặc thay đổi) phải 
+watch cả options và modelvalue vì khi edit thì có modelvalue trước options
+*/
+watch(
+  () => props.modelValue,
+  () => {
+    syncInputValue();
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.options,
+  () => {
+    syncInputValue();
+  },
+  { deep: true }
+);
+
 // Hàm computed phụ thuộc vào inputValue và props.options khi các giá trị này thay đổi sẽ tính toán lại filteredOptions
 const filteredOptions = computed(() => {
   // Không có text tìm kiếm thì trả lại list options

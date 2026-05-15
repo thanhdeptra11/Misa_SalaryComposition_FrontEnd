@@ -63,7 +63,14 @@ const clearTimer = () => {
     timer = null;
   }
 };
-
+/*
+visible = true
+  → watch kích hoạt → startTimer()
+    → sau 3000ms → close()
+      → emit('update:visible', false)
+        → App.vue cập nhật → visible = false
+          → toast ẩn
+*/ 
 watch(
   () => props.visible,
   (newVal) => {

@@ -1,5 +1,5 @@
 import { reactive } from 'vue';
-
+// Đây là 1 singleton để mọi nơi gọi useToast() qua 1 state dùng chung
 const toastState = reactive({
   visible: false,
   message: '',
@@ -15,6 +15,7 @@ export const useToast = () => {
     duration = 3000,
     position = 'top-center'
   }) => {
+    // Ẩn toast cũ
     toastState.visible = false;
 
     setTimeout(() => {
@@ -22,6 +23,7 @@ export const useToast = () => {
       toastState.type = type;
       toastState.duration = duration;
       toastState.position = position;
+      // Đẩy việc hiển thị sang tick tiếp theo
       toastState.visible = true;
     }, 0);
   };

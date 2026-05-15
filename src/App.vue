@@ -1,5 +1,6 @@
 <template>
   <router-view />
+  <!-- Đảm bảo toast luôn nằm trên cùng -->
   <BaseToastMessage
     v-model:visible="toastState.visible"
     :message="toastState.message"

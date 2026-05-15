@@ -5,7 +5,7 @@
     :class="`base_button--${variant}`"
     :title="title"
     :style="{width: width}"
-    @click="$emit('click')"
+    @click="$emit('click', $event)"
   >
     <!--  -->
     <div v-if="iconClass" class="base_button__icon" :class="iconClass"></div>
@@ -14,7 +14,7 @@
     
     <template v-if="variant === 'mixed' || variant === 'combo'">
       <div class="base_button__divider"></div>
-      <div class="base_button__dropdown" @click.stop="$emit('click-dropdown')">
+      <div class="base_button__dropdown" @click.stop="$emit('click-dropdown', $event)">
         <div class="icon_down base_button__dropdown-icon"></div>
       </div>
     </template>

@@ -9,7 +9,8 @@
       <input
         :type="type"
         class="base-input-field"
-        :class="{ 'error': errorMessage }"
+        :disabled="disabled"
+        :class="{ 'error': errorMessage, 'disabled': disabled }"
         :placeholder="placeholder"
         :value="modelValue"
         @input="$emit('update:modelValue', $event.target.value)"
@@ -56,6 +57,10 @@ defineProps({
   errorMessage:{
     type: String,
     default: ''
+  },
+  disabled:{
+    type: Boolean,
+    default: false
   }
 })
 
@@ -117,5 +122,14 @@ defineEmits(['update:modelValue', 'blur'])
   font-size: 12px;
   color: #ff6161;
 }
+.base-input-field:disabled,
+.base-input-field.disabled {
+  background-color: #f1f2f5;
+  color: #666;
+}
 
+.base-input-field:disabled:hover,
+.base-input-field:disabled:focus {
+  border-color: $border-gray;
+}
 </style>

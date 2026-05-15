@@ -28,6 +28,7 @@
 
       <BaseButton
         variant="secondary"
+        :class="confirmButtonClass"
         :buttonText="confirmText"
         @click="handleConfirm"
       />
@@ -63,6 +64,10 @@ defineProps({
   secondaryText: {
     type: String,
     default: 'Không lưu'
+  },
+  confirmButtonClass: {
+  type: String,
+  default: ''
   },
   confirmText: {
     type: String,

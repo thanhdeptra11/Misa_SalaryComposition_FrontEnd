@@ -38,7 +38,6 @@
         :width="200"
         :fixed="true"
         fixed-position="right"
-        css-class="action-column"
         cell-template="actionTemplate"
       />
 
@@ -51,7 +50,7 @@
             variant="icon-only"
             :icon-class="btn.icon"
             :title="btn.hint"
-            @click.stop="btn.onClick(data)"
+            @click.stop="btn.onClick(data.data)"
           />
         </div>
       </template>

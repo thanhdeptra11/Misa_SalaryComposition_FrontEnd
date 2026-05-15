@@ -1,6 +1,7 @@
 <template>
 <!-- Gọi Base layout lắng nghe sự kiện back -->
- <BaseFormLayout pageTitle="Thêm thành phần" @back="handleBack">
+ <BaseFormLayout :pageTitle="isEditMode ? (props.editingItem?.compositionName || 'Sửa thành phần') : 'Thêm thành phần'"
+  @back="handleBack">
  <!-- Slot của actions -->
   <template #header-actions>
     <div class="buttons_wrapper">
@@ -30,6 +31,7 @@
            v-model="compositionName"  label="Tên thành phần" 
             labelWidth="180px" inputWidth="676px" :required=true
              :error-message="errors.compositionName"
+              
               @blur="validateField('compositionName')"
               @update:modelValue="handleFieldChange('compositionName')"
             />
@@ -39,6 +41,7 @@
           <BaseInput v-model="compositionCode"  label="Mã thành phần" placeholder="Nhập mã viết liền"
           labelWidth="180px" inputWidth="676px" :required=true
           :error-message="errors.compositionCode"
+          :disabled="isEditMode" 
           @blur="validateField('compositionCode')"
            
           />
@@ -122,6 +125,7 @@
               v-model="internalValueType"
               labelWidth="180px"
               inputWidth="237px"
+              :disabled="true"
             />
           </div>
           <!-- Input nhập giá trị -->
@@ -213,103 +217,113 @@
   />
 </template>
 <script setup>
-// Import components 
+// ========================
+// Vue core
+// ========================
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+
+// ========================
+// Base components
+// ========================
 import BaseButton from '@/components/base/baseButton/BaseButton.vue';
 import BaseFormLayout from '@/components/base/BaseFormLayout.vue';
 import BaseInput from '@/components/base/baseInput/BaseInput.vue';
 import BaseHierachyTree from '@/components/base/baseInput/BaseHierachyTree.vue';
-import { DxTooltip } from 'devextreme-vue';
-// ========================
-// Services và js
-import organizationService from '@/services/organizationService';
-import enumService from '@/services/enumService';
-import salaryCompositionService from '@/services/salaryCompositionService';
-import { t } from '@/utils/resourseReader';
-import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
-import { cleanPayload } from '@/utils/helper';
-// import validator
-import { required, maxLength } from '@/utils/validator';
-// ========================
-// Import vue function
-import { computed, ref, watch, reactive } from 'vue';
-import { onMounted } from 'vue';
 import BaseCombobox from '@/components/base/baseInput/BaseCombobox.vue';
 import BaseRadio from '@/components/base/baseInput/BaseRadio.vue';
 import BaseTextArea from '@/components/base/baseInput/BaseTextArea.vue';
 import BaseRadioGroup from '@/components/base/baseInput/BaseRadioGroup.vue';
-// ====================
-// Composable dùng chung cho component
+import BaseCheckBox from '@/components/base/baseInput/BaseCheckBox.vue';
+import BaseToolTip from '@/components/base/BaseToolTip.vue';
+import BaseTextUnderline from '@/components/base/baseInput/BaseTextUnderline.vue';
+import BaseConfirmModal from '@/components/base/baseModal/BaseConfirmModal.vue';
+
+// ========================
+// Services / utils
+// ========================
+import organizationService from '@/services/organizationService';
+import enumService from '@/services/enumService';
+import salaryCompositionService from '@/services/salaryCompositionService';
+import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
+import { cleanPayload } from '@/utils/helper';
+import { t } from '@/utils/resourseReader';
+import { required } from '@/utils/validator';
 import { useToast } from '@/components/base/composables/useToast';
-const { showSuccess, showError } = useToast();
-// ====================
-const valueOptions = [
-  {
-    label: 'Tự động cộng tổng giá trị của các nhân viên',
-    value: 'takeSum'
+
+// ========================
+// Props / emits
+// ========================
+const props = defineProps({
+  // mode = create: thêm mới, mode = edit: sửa bản ghi
+  mode: {
+    type: String,
+    default: 'create'
   },
-  {
-    label: 'Tính theo công thức tự đặt',
-    value: 'formula'
+
+  // Dữ liệu dòng được chọn từ list khi sửa
+  editingItem: {
+    type: Object,
+    default: null
   }
-]
-// Define emit back về trang list
+});
+
 const emit = defineEmits(['back', 'saved']);
 
-// Khai báo biến load danh sách đơn vị
+// ========================
+// Composable dùng chung
+// ========================
+const { showSuccess, showError } = useToast();
+
+// ========================
+// Mode state
+// ========================
+const isEditMode = computed(() => props.mode === 'edit');
+
+// Cờ này dùng để tránh watcher tự sinh mã chạy nhầm lúc đang bind dữ liệu sửa
+const isBindingForm = ref(false);
+
+// Cờ xác định mã thành phần đã bị user sửa tay chưa
+const isCodeManuallyEdited = ref(false);
+
+// Cờ xác định hệ thống đang tự sinh mã từ tên thành phần
+const isAutoGenerating = ref(false);
+
+// ========================
+// Options state
+// ========================
 const unitOptions = ref([]);
-// Khai báo biến loại thành phần
 const typeOptions = ref([]);
-// Khai báo biến tính chất
 const propertyOptions = ref([]);
-// Khai báo biến kiểu áp dụng thuế
 const taxAppliedTypes = ref([]);
-// Khai báo biến kiểu giá trị
 const valueTypeOptions = ref([]);
-// Khai báo biến hiển thị trên phiếu lương
-const displayPayrollTypeOptions = ref([])
+const displayPayrollTypeOptions = ref([]);
 
+// ========================
+// Form state
+// ========================
+const salaryCompositionId = ref(null);
+const systemCompositionId = ref(null);
 
-const fetchUnitOptions = async () => {
-  try {
-    const data = await organizationService.getOrganizations();
-    if (data && Array.isArray(data)) {
-      unitOptions.value = data;
-    }
-  } catch (error) {
-    console.error("Lỗi khi lấy dữ liệu phòng ban:", error);
-  }
-};
-// Biến nhập Tên thành phần
 const compositionName = ref('');
-// Biến nhập Mã thành phần
 const compositionCode = ref('');
-// Biến nhập Định mức
+const compositionOrganization = ref([]);
+const compositionType = ref(null);
+const compositionProperty = ref(null);
+const internalTaxAppliedType = ref(null);
 const compositionNorm = ref('');
-// Biến selected đơn vị
-const compositionOrganization = ref()
-// Biến selected loại thành phần
-const compositionType = ref()
-// Biến selected tính chất
-const compositionProperty = ref()
-// Biến selected kiểu áp dụng thuế
-const internalTaxAppliedType = ref()
-// Biến checked có cho phép giá trị vượt quá định mức
 const isValueExceedNorm = ref(false);
-// Biến selected kiểu giá trị
-const internalValueType = ref()
-// Biến selected giá trị
-const ValueoptionModel = ref()
-// Biến công thức tự đặt
-const customFormula = ref('')
-// Biến mô tả
-const salaryCompositionDescription = ref('')
-// Biến selected hiển thị trên phiếu lương
-const displayPayroll = ref()
-// Biến nguồn tạo
-const sourceOfCreation = ref('Tự thêm')
-// Biến reactive để validate
-const errors = reactive({})
-// Khởi tạo rule field trong rule phải khớp với resources
+const internalValueType = ref(4);
+const ValueoptionModel = ref(null);
+const customFormula = ref('');
+const salaryCompositionDescription = ref('');
+const displayPayroll = ref(null);
+const sourceOfCreation = ref('Tự thêm');
+
+// ========================
+// Validate state
+// ========================
+const errors = reactive({});
+
 const validationRules = {
   compositionName: [
     required('fields.salaryComposition.compositionName')
@@ -322,16 +336,150 @@ const validationRules = {
   ],
   compositionProperty: [
     required('fields.salaryComposition.compositionProperty')
-  ],
-}
-// Lấy formvalue cần validate
+  ]
+};
+
 const formValidateValues = {
   compositionName,
   compositionCode,
   compositionType,
   compositionProperty
-}
-// Validate từng field
+};
+
+// ========================
+// Confirm modal state
+// ========================
+const isShowCancelConfirmModal = ref(false);
+
+// ========================
+// Form mapping
+// ========================
+const formFields = {
+  salaryCompositionId,
+  systemCompositionId,
+  compositionOrganization,
+  compositionCode,
+  compositionName,
+  compositionType,
+  compositionProperty,
+  internalTaxAppliedType,
+  compositionNorm,
+  internalValueType,
+  customFormula,
+  salaryCompositionDescription,
+  displayPayroll,
+  sourceOfCreation
+};
+
+const defaultFormValues = {
+  salaryCompositionId: null,
+  systemCompositionId: null,
+  compositionOrganization: [],
+  compositionCode: '',
+  compositionName: '',
+  compositionType: null,
+  compositionProperty: null,
+  internalTaxAppliedType: null,
+  compositionNorm: '',
+  internalValueType: 4,
+  customFormula: '',
+  salaryCompositionDescription: '',
+  displayPayroll: null,
+  sourceOfCreation: 'Tự thêm'
+};
+
+const editFieldMap = {
+  salaryCompositionId: 'id',
+  systemCompositionId: 'systemCompositionId',
+  compositionCode: 'compositionCode',
+  compositionName: 'compositionName',
+  compositionType: 'compositionType',
+  compositionProperty: 'property',
+  internalTaxAppliedType: 'taxableType',
+  compositionNorm: 'norm',
+  internalValueType: 'valueType',
+  customFormula: 'valueExpression',
+  salaryCompositionDescription: 'description',
+  displayPayroll: 'showOnPayslip',
+  sourceOfCreation: 'creationSource'
+};
+
+const cloneDefaultValue = (value) => {
+  // Clone array để tránh các lần reset dùng chung một reference
+  return Array.isArray(value) ? [...value] : value;
+};
+
+// ========================
+// Computed
+// ========================
+const highestSelectedIds = computed(() => {
+  // BaseHierachyTree dùng multiple nên luôn chuẩn hóa về array trước khi filter
+  const selectedIds = Array.isArray(compositionOrganization.value)
+    ? compositionOrganization.value
+    : [];
+
+  const selectedSet = new Set(selectedIds);
+
+  const orgMap = new Map(
+    unitOptions.value.map((org) => [org.id, org])
+  );
+
+  // Chỉ lấy các đơn vị cấp cao nhất, bỏ các node con nếu parent đã được chọn
+  return selectedIds.filter((id) => {
+    const org = orgMap.get(id);
+
+    return org && !selectedSet.has(org.parentId);
+  });
+});
+
+const isFormDirty = computed(() => {
+  // Không tính sourceOfCreation vì field này có default "Tự thêm"
+  const valuesNeedCheck = [
+    compositionName.value,
+    compositionCode.value,
+    compositionOrganization.value,
+    compositionType.value,
+    compositionProperty.value,
+    internalTaxAppliedType.value,
+    compositionNorm.value,
+    isValueExceedNorm.value,
+    internalValueType.value,
+    ValueoptionModel.value,
+    customFormula.value,
+    salaryCompositionDescription.value,
+    displayPayroll.value
+  ];
+
+  return valuesNeedCheck.some((value) => !isEmptyValue(value));
+});
+
+// ========================
+// Fetch options
+// ========================
+const fetchUnitOptions = async () => {
+  try {
+    const data = await organizationService.getOrganizations();
+
+    if (Array.isArray(data)) {
+      unitOptions.value = data;
+    }
+  } catch (error) {
+    console.error('Lỗi khi lấy dữ liệu phòng ban:', error);
+  }
+};
+
+const fetchComboboxOptions = () => {
+  // Load các enum dùng cho combobox/radio trong form
+  enumService.fetchCbBoxOptions('CompositionType', typeOptions);
+  enumService.fetchCbBoxOptions('CompositionProperty', propertyOptions);
+  enumService.fetchCbBoxOptions('TaxAppliedType', taxAppliedTypes);
+  enumService.fetchCbBoxOptions('MiValueType', valueTypeOptions);
+  enumService.fetchCbBoxOptions('DisplayPayrollType', displayPayrollTypeOptions);
+};
+
+// ========================
+// Validate methods
+// ========================
 const validateField = (fieldName) => {
   const rules = validationRules[fieldName] || [];
   const value = formValidateValues[fieldName].value;
@@ -352,6 +500,7 @@ const validateField = (fieldName) => {
 const validateForm = () => {
   let isValid = true;
 
+  // Dùng forEach để validate hết field, không dừng ở field lỗi đầu tiên
   Object.keys(validationRules).forEach((fieldName) => {
     const fieldValid = validateField(fieldName);
 
@@ -362,16 +511,59 @@ const validateForm = () => {
 
   return isValid;
 };
-// Validate lại khi field có lỗi 
+
 const handleFieldChange = (fieldName) => {
+  // Chỉ validate lại khi field đang có lỗi để lỗi mất ngay khi user sửa đúng
   if (errors[fieldName]) {
     validateField(fieldName);
   }
 };
 
-// Check form đã được nhập hay chưa
-const isShowCancelConfirmModal = ref(false);
+// ========================
+// Bind / reset form
+// ========================
+const resetForm = () => {
+  // Reset toàn bộ field về default khi mở form thêm mới
+  Object.keys(defaultFormValues).forEach((fieldName) => {
+    formFields[fieldName].value = cloneDefaultValue(defaultFormValues[fieldName]);
+  });
 
+  // Reset trạng thái sinh mã
+  isCodeManuallyEdited.value = false;
+};
+
+const bindFormData = (item) => {
+  isBindingForm.value = true;
+
+  try {
+    if (!item) {
+      resetForm();
+      return;
+    }
+
+    // Bind các field có mapping 1-1 giữa API và form
+    Object.keys(editFieldMap).forEach((fieldName) => {
+      const apiFieldName = editFieldMap[fieldName];
+      const defaultValue = cloneDefaultValue(defaultFormValues[fieldName]);
+
+      formFields[fieldName].value = item[apiFieldName] ?? defaultValue;
+    });
+
+    // Tree chọn đơn vị dùng array, trong khi API trả organizationId là một Guid
+    compositionOrganization.value = item.organizationId
+      ? [item.organizationId]
+      : [];
+
+    // Khi sửa, mã đã có sẵn nên không để watcher tự sinh mã ghi đè
+    isCodeManuallyEdited.value = !!compositionCode.value;
+  } finally {
+    isBindingForm.value = false;
+  }
+};
+
+// ========================
+// Dirty / cancel methods
+// ========================
 const isEmptyValue = (value) => {
   if (Array.isArray(value)) {
     return value.length === 0;
@@ -384,31 +576,12 @@ const isEmptyValue = (value) => {
   return !String(value ?? '').trim();
 };
 
-const isFormDirty = computed(() => {
-  const valuesNeedCheck = [
-    compositionName.value,
-    compositionCode.value,
-    compositionOrganization.value,
-    compositionType.value,
-    compositionProperty.value,
-    internalTaxAppliedType.value,
-    compositionNorm.value,
-    isValueExceedNorm.value,
-    internalValueType.value,
-    ValueoptionModel.value,
-    customFormula.value,
-    salaryCompositionDescription.value,
-    displayPayroll.value
-  ];
-
-  return valuesNeedCheck.some((value) => !isEmptyValue(value));
-});
-// Xử lí khi click nút Hủy
 const handleBack = () => {
   handleCancelForm();
 };
 
 const handleCancelForm = () => {
+  // Nếu form đã có dữ liệu thì hỏi xác nhận trước khi thoát
   if (isFormDirty.value) {
     isShowCancelConfirmModal.value = true;
     return;
@@ -416,12 +589,14 @@ const handleCancelForm = () => {
 
   emit('back');
 };
-// Xử lí nút không lưu
+
 const handleDiscardChanges = () => {
+  // Không lưu, quay lại màn danh sách
   emit('back');
 };
-// Xử lí nút lưu trong modal hủy
+
 const handleSaveAndBack = async () => {
+  // Nút "Lưu" trong modal xác nhận hủy
   const isSaved = await handleSave();
 
   if (isSaved) {
@@ -430,28 +605,11 @@ const handleSaveAndBack = async () => {
   }
 };
 
-// Computed tính toán để chỉ lấy id các đơn vị cấp cao nhất
-const highestSelectedIds = computed(() => {
-  const selectedIds = Array.isArray(compositionOrganization.value)
-    ? compositionOrganization.value
-    : [];
-  const selectedSet = new Set(selectedIds)
-
-  const orgMap = new Map(
-    unitOptions.value.map(org => [org.id, org])
-  )
-
-  return selectedIds.filter(id => {
-    const org = orgMap.get(id)
-
-    return org && !selectedSet.has(org.parentId)
-  })
-})
-// Biến flag lưu state current code
-const isCodeManuallyEdited = ref(false);
-const isAutoGenerating = ref(false);
-// Hàm xử lí sinh mã thành phần tự động
+// ========================
+// Auto generate code
+// ========================
 const generateCompositionCode = (value) => {
+  // Sinh mã từ tên: bỏ dấu, đổi khoảng trắng thành _, bỏ ký tự đặc biệt, viết hoa
   return (value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -460,16 +618,96 @@ const generateCompositionCode = (value) => {
     .toUpperCase();
 };
 
-watch(compositionCode, (newValue) => {
-  handleFieldChange('compositionCode');
-  if (isAutoGenerating.value) return;
+// ========================
+// Submit methods
+// ========================
+const buildPayload = () => {
+  // Payload dùng chung cho thêm mới và sửa
+  return cleanPayload({
+    organizationId: highestSelectedIds.value[0],
+    systemCompositionId: systemCompositionId.value,
+    compositionCode: compositionCode.value,
+    compositionName: compositionName.value,
+    compositionType: compositionType.value,
+    property: compositionProperty.value,
+    taxableType: internalTaxAppliedType.value,
+    taxDeductionType: 'Không',
+    norm: compositionNorm.value,
+    valueType: internalValueType.value,
+    valueExpression: customFormula.value,
+    description: salaryCompositionDescription.value,
+    showOnPayslip: displayPayroll.value,
+    creationSource: sourceOfCreation.value,
+    status: true,
 
-  isCodeManuallyEdited.value = !!newValue;
-},
-  { flush: 'sync' });
+    // BE yêu cầu id khi update
+    ...(isEditMode.value ? { id: salaryCompositionId.value } : {})
+  });
+};
 
-// Xử lí gõ ô Tên thành phần thì tự sinh mã thành phần
+const handleSave = async () => {
+  // Validate fail thì không gọi API
+  if (!validateForm()) return false;
+
+  try {
+    const payload = buildPayload();
+
+    if (isEditMode.value) {
+      // Form sửa thì gọi API update
+      await salaryCompositionService.update(payload);
+      showSuccess(t('message.activities.updateSuccess'));
+    } else {
+      // Form thêm mới thì gọi API create
+      await salaryCompositionService.create(payload);
+      showSuccess(t('message.activities.createSuccess'));
+    }
+
+    // Báo cho list biết đã lưu thành công để đóng form và fetch lại
+    emit('saved');
+    return true;
+  } catch (error) {
+    showError(
+      isEditMode.value
+        ? t('message.activities.updateError')
+        : t('message.activities.createError')
+    );
+
+    return false;
+  }
+};
+
+// ========================
+// Watchers
+// ========================
+watch(
+  () => props.editingItem,
+  (newItem) => {
+    // Bind dữ liệu khi chuyển giữa thêm mới và sửa
+    bindFormData(newItem);
+  },
+  { immediate: true }
+);
+
+watch(
+  compositionCode,
+  () => {
+    // Bỏ qua watcher khi đang bind form để tránh set nhầm trạng thái user sửa tay
+    if (isBindingForm.value) return;
+
+    handleFieldChange('compositionCode');
+
+    if (isAutoGenerating.value) return;
+
+    isCodeManuallyEdited.value = !!compositionCode.value;
+  },
+  { flush: 'sync' }
+);
+
 watch(compositionName, (newValue) => {
+  // Bỏ qua auto generate khi đang bind dữ liệu edit/create
+  if (isBindingForm.value) return;
+
+  // Nếu user đã sửa mã tay thì không tự ghi đè mã nữa
   if (isCodeManuallyEdited.value) return;
 
   isAutoGenerating.value = true;
@@ -477,51 +715,15 @@ watch(compositionName, (newValue) => {
   isAutoGenerating.value = false;
 });
 
-// Hàm xử lí nút Lưu
-const handleSave = async () => {
-  if(!validateForm()) return;
-  try {
-  // Tạo payload
-  const payload = cleanPayload( {
-    organizationId: Array.isArray(highestSelectedIds.value) && highestSelectedIds.value.length > 0 ? highestSelectedIds.value : null,
-    systemCompositionId: null,
-    compositionCode: compositionCode.value ,
-    compositionName: compositionName.value,
-    compositionType: compositionType.value, 
-    property: compositionProperty.value,
-    taxableType: internalTaxAppliedType.value,
-    taxDeductionType: "Không", // Backend yêu cầu truyền cứng
-    norm: compositionNorm.value,
-    valueType: internalValueType.value,
-    valueExpression: customFormula.value,
-    description: salaryCompositionDescription.value,
-    showOnPayslip: displayPayroll.value,
-    creationSource: sourceOfCreation.value,
-    status: true // Mặc định là kích hoạt
-  })
-  // Đẩy lên Be
-  const response = await salaryCompositionService.create(payload);
-  showSuccess(t('message.activities.createSuccess'));
-  emit('back');
-  emit('saved');
-  return true;
-} catch (error) {
-  showError(t('message.activities.createError'));
-  return false;
-}
-  
-}
-
-// Onmounted
+// ========================
+// Lifecycle
+// ========================
 onMounted(() => {
-    fetchUnitOptions();
-    enumService.fetchCbBoxOptions('CompositionType', typeOptions);
-    enumService.fetchCbBoxOptions('CompositionProperty', propertyOptions);
-    enumService.fetchCbBoxOptions('TaxAppliedType', taxAppliedTypes);
-    enumService.fetchCbBoxOptions('MiValueType', valueTypeOptions);
-    enumService.fetchCbBoxOptions('DisplayPayrollType', displayPayrollTypeOptions);
-})
+  fetchUnitOptions();
+  fetchComboboxOptions();
+});
 </script>
+
 <style lang="scss" scoped>
 .composition_input{
     display: flex;
@@ -531,8 +733,8 @@ onMounted(() => {
     .place_holder{
         display: flex;
         align-items: center;
-        width: 180px;
-        min-width: 180px;
+        width: 188px;
+        min-width: 188px;
         height: 36px;
         padding-right: 8px;
         box-sizing: border-box;

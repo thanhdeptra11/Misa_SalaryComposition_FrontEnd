@@ -1,3 +1,4 @@
+<!-- Dropdown hiển thị label đang chọn là text khi click show dropdown options -->
 <template>
   <div class="base_dropdown" :class="[`base_dropdown--${variant}`]" ref="wrapperRef" tabindex="0" @blur="closePopup">
     <div class="base_dropdown__display" @click="togglePopup">
@@ -16,9 +17,7 @@
           @mouseenter="highlightedValue = opt.value"
         >
           <span class="item-label">{{ opt.label }}</span>
-          <svg v-if="opt.value === modelValue" class="check-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5 13L9 17L19 7" stroke="#34B057" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <div v-if="opt.value === modelValue" class="icon_check" ></div>
         </li>
       </ul>
     </Transition>
