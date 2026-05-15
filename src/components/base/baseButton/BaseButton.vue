@@ -63,7 +63,6 @@ const rootTag = computed(() =>
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   flex-shrink: 0;
 
   border: 1px solid $border-gray;
@@ -72,13 +71,13 @@ const rootTag = computed(() =>
   background-color: #ffffff;
   font-weight: 500;
   font-size: 14px !important;
-
+  min-width: 80px !important;
   width: auto;
   height: 36px !important;
 
-  padding: 8px 12px !important;
+  padding-left: 16px;
+  padding-right: 16px;
   border-radius: 4px !important;
-  margin-left: 15px;
   cursor: pointer;
 
   .base_button__icon {
@@ -101,7 +100,7 @@ const rootTag = computed(() =>
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  min-width: 80px !important;
   flex-shrink: 0;
 
   background-color: $primary-green;
@@ -112,8 +111,8 @@ const rootTag = computed(() =>
   font-weight: 500;
   font-size: 14px;
   height: 36px;
-  padding: 8px 12px;
-  margin-left: 15px;
+  padding-left: 16px;
+  padding-right: 16px;
   border-radius: 4px;
   cursor: pointer;
 

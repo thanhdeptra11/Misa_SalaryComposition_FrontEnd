@@ -14,11 +14,10 @@
         >
           <div class="modal-header">
             <span class="modal-title">{{ title }}</span>
-            <div class="close-btn icon_close" @click="closeModal">
-             
+            <div id="icon-close" class="close-btn icon_close" @click="closeModal">
             </div>
           </div>
-          
+          <BaseToolTip target="#icon-close" content="Đóng"/>
           <div class="modal-body">
             <slot name="default"></slot>
           </div>
@@ -30,10 +29,12 @@
       </div>
     </Transition>
   </Teleport>
+  
 </template>
 
 <script setup>
 import { watch } from 'vue'
+import BaseToolTip from '../BaseToolTip.vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },

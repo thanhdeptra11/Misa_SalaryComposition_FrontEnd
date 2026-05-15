@@ -4,7 +4,7 @@
             :target="target"
             show-event="mouseenter"
             hide-event="mouseleave"
-            :wrapper-attr="{ class: 'tooltip_custom' }"
+            :wrapperAttr="{ class: 'tooltip_custom' }"
           >
             {{ content }}
     </DxTooltip>
@@ -23,6 +23,9 @@
     })
 </script>
 <style lang="scss">
+.tooltip_custom {
+  z-index: 10001 !important;
+}
 .tooltip_custom.dx-overlay-content {
   background-color: #34B057 !important;
   border: none !important;

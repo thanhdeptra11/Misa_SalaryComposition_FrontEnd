@@ -29,6 +29,7 @@
         :fixed-position="col.fixedPosition"
         :cell-template="col.cellTemplate"
         :alignment="col.alignment || 'left'"
+        :customize-text="customizeEmptyCellText"
       />
 
       <!-- Fixed action column -->
@@ -99,6 +100,19 @@ const columnsWithTemplates = computed(() => {
 const onRowClick = (e) => {
   emit('rowClick', e.data);
 };
+const customizeEmptyCellText = (cellInfo) => {
+  // Các giá trị null/undefined/chuỗi rỗng sẽ hiển thị dấu gạch ngang
+  if (
+    cellInfo.value === null ||
+    cellInfo.value === undefined ||
+    String(cellInfo.value).trim() === ''
+  ) {
+    return '-';
+  }
+  // Các giá trị hợp lệ như 0, false vẫn được giữ nguyên để tránh sai dữ liệu
+  return cellInfo.valueText;
+};
+
 </script>
 
 <style lang="scss">

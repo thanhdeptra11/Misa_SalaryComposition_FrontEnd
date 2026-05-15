@@ -1,12 +1,17 @@
 
 import { vrResource } from '@/resources/validateResource';
+import { messageResource } from '@/resources/messageResource';
+const resources = {
+  ...vrResource,
+  message: messageResource
+};
 // Hàm đọc và trả về giá trị theo key dạng x.y.z
 const getByPath = (obj, path) => {
   return path.split('.').reduce((current, key) => current?.[key], obj);
 };
 
 export const t = (key, params = {}) => {
-  let message = getByPath(vrResource, key) || key;
+  let message = getByPath(resources, key) || key;
   Object.keys(params).forEach((paramKey) => {
     message = message.replace(`{${paramKey}}`, params[paramKey]);
   });

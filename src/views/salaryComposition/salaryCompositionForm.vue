@@ -3,20 +3,24 @@
  <BaseFormLayout pageTitle="Thêm thành phần" @back="handleBack">
  <!-- Slot của actions -->
   <template #header-actions>
-    <BaseButton
-    variant="primary"
-    buttonText="Hủy bỏ"
-    />
+    <div class="buttons_wrapper">
+      <BaseButton
+      variant="primary"
+      buttonText="Hủy bỏ"
+      @click="handleCancelForm"
+      />
      <BaseButton
-    variant="primary"
-    buttonText="Lưu và thêm"
-    />
-    <BaseButton
-    @click="handleSave"
-    variant="secondary"
-    buttonText="Lưu"
-    width="80px"
-    />
+      variant="primary"
+      buttonText="Lưu và thêm"
+      />
+      <BaseButton
+      @click="handleSave"
+      variant="secondary"
+      buttonText="Lưu"
+      width="80px"
+      />
+    </div>
+    
   </template>
   <!-- Nội dung chính có thể cuộn -->
    <div class="salary_composition_inputs">
@@ -24,7 +28,7 @@
          <div class="composition_input">
            <BaseInput 
            v-model="compositionName"  label="Tên thành phần" 
-            labelWidth="180px" inputWidth="676px" required="true"
+            labelWidth="180px" inputWidth="676px" :required=true
              :error-message="errors.compositionName"
               @blur="validateField('compositionName')"
               @update:modelValue="handleFieldChange('compositionName')"
@@ -33,7 +37,7 @@
         <!-- Input nhập Mã thành phần -->
         <div class="composition_input">
           <BaseInput v-model="compositionCode"  label="Mã thành phần" placeholder="Nhập mã viết liền"
-          labelWidth="180px" inputWidth="676px" required="true"
+          labelWidth="180px" inputWidth="676px" :required=true
           :error-message="errors.compositionCode"
           @blur="validateField('compositionCode')"
            
@@ -46,7 +50,7 @@
             v-model="compositionOrganization"
             :custom-data-source="unitOptions"
             display-expr="organizationName"
-            :dropDownBoxWidth="676"
+            :dropDownBoxWidth= 676
             />
          </div>
          <!-- Input nhập loại thành phần -->
@@ -58,7 +62,7 @@
               :options="typeOptions"
               label="Loại thành phần"
               placeholder=""
-              required="true"
+              :required=true
               labelWidth="180px" 
               inputWidth="237px"
               :errorMessage="errors.compositionType"
@@ -74,7 +78,7 @@
               :options="propertyOptions"
               label="Tính chất"
               placeholder=""
-              required="true"
+              :required=true
               labelWidth="180px" 
               inputWidth="237px"
               :errorMessage="errors.compositionProperty"
@@ -197,6 +201,16 @@
             </div>
    </div>
  </BaseFormLayout>
+  <BaseConfirmModal
+    v-model="isShowCancelConfirmModal"
+    title="Thông báo"
+    message="Thông tin đã được thay đổi. Bạn có muốn lưu lại không?"
+    cancelText="Hủy"
+    secondaryText="Không lưu"
+    confirmText="Lưu"
+    @secondary="handleDiscardChanges"
+    @confirm="handleSaveAndBack"
+  />
 </template>
 <script setup>
 // Import components 
@@ -210,7 +224,9 @@ import { DxTooltip } from 'devextreme-vue';
 import organizationService from '@/services/organizationService';
 import enumService from '@/services/enumService';
 import salaryCompositionService from '@/services/salaryCompositionService';
+import { t } from '@/utils/resourseReader';
 import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
+import { cleanPayload } from '@/utils/helper';
 // import validator
 import { required, maxLength } from '@/utils/validator';
 // ========================
@@ -222,6 +238,10 @@ import BaseRadio from '@/components/base/baseInput/BaseRadio.vue';
 import BaseTextArea from '@/components/base/baseInput/BaseTextArea.vue';
 import BaseRadioGroup from '@/components/base/baseInput/BaseRadioGroup.vue';
 // ====================
+// Composable dùng chung cho component
+import { useToast } from '@/components/base/composables/useToast';
+const { showSuccess, showError } = useToast();
+// ====================
 const valueOptions = [
   {
     label: 'Tự động cộng tổng giá trị của các nhân viên',
@@ -232,10 +252,9 @@ const valueOptions = [
     value: 'formula'
   }
 ]
-const handleBack = () => {
-    console.log('back');
-    
-}
+// Define emit back về trang list
+const emit = defineEmits(['back', 'saved']);
+
 // Khai báo biến load danh sách đơn vị
 const unitOptions = ref([]);
 // Khai báo biến loại thành phần
@@ -267,25 +286,25 @@ const compositionCode = ref('');
 // Biến nhập Định mức
 const compositionNorm = ref('');
 // Biến selected đơn vị
-const compositionOrganization = ref([])
+const compositionOrganization = ref()
 // Biến selected loại thành phần
-const compositionType = ref([])
+const compositionType = ref()
 // Biến selected tính chất
-const compositionProperty = ref([])
+const compositionProperty = ref()
 // Biến selected kiểu áp dụng thuế
-const internalTaxAppliedType = ref([])
+const internalTaxAppliedType = ref()
 // Biến checked có cho phép giá trị vượt quá định mức
 const isValueExceedNorm = ref(false);
 // Biến selected kiểu giá trị
-const internalValueType = ref([])
+const internalValueType = ref()
 // Biến selected giá trị
-const ValueoptionModel = ref([])
+const ValueoptionModel = ref()
 // Biến công thức tự đặt
 const customFormula = ref('')
 // Biến mô tả
 const salaryCompositionDescription = ref('')
 // Biến selected hiển thị trên phiếu lương
-const displayPayroll = ref([])
+const displayPayroll = ref()
 // Biến nguồn tạo
 const sourceOfCreation = ref('Tự thêm')
 // Biến reactive để validate
@@ -298,9 +317,6 @@ const validationRules = {
   compositionCode: [
     required('fields.salaryComposition.compositionCode')
   ],
-  compositionOrganization: [
-    required('fields.salaryComposition.compositionOrganization')
-  ],
   compositionType: [
     required('fields.salaryComposition.compositionType')
   ],
@@ -312,7 +328,6 @@ const validationRules = {
 const formValidateValues = {
   compositionName,
   compositionCode,
-  compositionOrganization,
   compositionType,
   compositionProperty
 }
@@ -354,15 +369,79 @@ const handleFieldChange = (fieldName) => {
   }
 };
 
+// Check form đã được nhập hay chưa
+const isShowCancelConfirmModal = ref(false);
+
+const isEmptyValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+
+  if (typeof value === 'boolean') {
+    return value === false;
+  }
+
+  return !String(value ?? '').trim();
+};
+
+const isFormDirty = computed(() => {
+  const valuesNeedCheck = [
+    compositionName.value,
+    compositionCode.value,
+    compositionOrganization.value,
+    compositionType.value,
+    compositionProperty.value,
+    internalTaxAppliedType.value,
+    compositionNorm.value,
+    isValueExceedNorm.value,
+    internalValueType.value,
+    ValueoptionModel.value,
+    customFormula.value,
+    salaryCompositionDescription.value,
+    displayPayroll.value
+  ];
+
+  return valuesNeedCheck.some((value) => !isEmptyValue(value));
+});
+// Xử lí khi click nút Hủy
+const handleBack = () => {
+  handleCancelForm();
+};
+
+const handleCancelForm = () => {
+  if (isFormDirty.value) {
+    isShowCancelConfirmModal.value = true;
+    return;
+  }
+
+  emit('back');
+};
+// Xử lí nút không lưu
+const handleDiscardChanges = () => {
+  emit('back');
+};
+// Xử lí nút lưu trong modal hủy
+const handleSaveAndBack = async () => {
+  const isSaved = await handleSave();
+
+  if (isSaved) {
+    isShowCancelConfirmModal.value = false;
+    emit('back');
+  }
+};
+
 // Computed tính toán để chỉ lấy id các đơn vị cấp cao nhất
 const highestSelectedIds = computed(() => {
-  const selectedSet = new Set(compositionOrganization.value)
+  const selectedIds = Array.isArray(compositionOrganization.value)
+    ? compositionOrganization.value
+    : [];
+  const selectedSet = new Set(selectedIds)
 
   const orgMap = new Map(
     unitOptions.value.map(org => [org.id, org])
   )
 
-  return compositionOrganization.value.filter(id => {
+  return selectedIds.filter(id => {
     const org = orgMap.get(id)
 
     return org && !selectedSet.has(org.parentId)
@@ -403,10 +482,10 @@ const handleSave = async () => {
   if(!validateForm()) return;
   try {
   // Tạo payload
-  const payload = {
-    organizationId: highestSelectedIds.value,
+  const payload = cleanPayload( {
+    organizationId: Array.isArray(highestSelectedIds.value) && highestSelectedIds.value.length > 0 ? highestSelectedIds.value : null,
     systemCompositionId: null,
-    compositionCode: compositionCode.value,
+    compositionCode: compositionCode.value ,
     compositionName: compositionName.value,
     compositionType: compositionType.value, 
     property: compositionProperty.value,
@@ -419,11 +498,16 @@ const handleSave = async () => {
     showOnPayslip: displayPayroll.value,
     creationSource: sourceOfCreation.value,
     status: true // Mặc định là kích hoạt
-  }
+  })
   // Đẩy lên Be
   const response = await salaryCompositionService.create(payload);
+  showSuccess(t('message.activities.createSuccess'));
+  emit('back');
+  emit('saved');
+  return true;
 } catch (error) {
-  console.log('Lỗi khi thêm mới thành phần lương', error);
+  showError(t('message.activities.createError'));
+  return false;
 }
   
 }
@@ -443,6 +527,7 @@ onMounted(() => {
     display: flex;
     align-items: center;
     margin-bottom: 16px;
+    
     .place_holder{
         display: flex;
         align-items: center;
@@ -486,6 +571,9 @@ onMounted(() => {
     margin-bottom: 16px;
   }
 }
-
+.buttons_wrapper{
+      display: flex;
+      gap: 12px;
+    }
 
 </style>

@@ -1,137 +1,192 @@
 <template>
-  <Transition name="toast-fade">
-    <div v-if="visible" class="base-toast" :class="`toast-${type}`">
-      <div class="toast-icon">
-        <span v-if="type === 'success'" class="icon-success">✓</span>
-        <span v-if="type === 'error'" class="icon-error">✕</span>
-        <span v-if="type === 'warning'" class="icon-warning">!</span>
+  <Teleport to="body">
+    <Transition name="toast-fade">
+      <div
+        v-if="visible"
+        class="base-toast"
+        :class="[`toast-${type}`, `toast-${position}`]"
+      >
+        <div class="toast-message">
+          {{ message }}
+        </div>
       </div>
-      <div class="toast-message">{{ message }}</div>
-      <button class="toast-close" @click="close">&times;</button>
-    </div>
-  </Transition>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { watch, onUnmounted } from 'vue';
 
 const props = defineProps({
-  visible: { type: Boolean, default: false },
-  message: { type: String, required: true },
-  type: { type: String, default: 'success' }, // 'success' | 'error' | 'warning'
-  duration: { type: Number, default: 3000 }
-})
+  visible: {
+    type: Boolean,
+    default: false
+  },
+  message: {
+    type: String,
+    default: ''
+  },
+  type: {
+    type: String,
+    default: 'success' // success | error | warning
+  },
+  duration: {
+    type: Number,
+    default: 3000
+  },
+  position: {
+    type: String,
+    default: 'top-center' // top-center | top-right
+  }
+});
 
-const emit = defineEmits(['update:visible'])
+const emit = defineEmits(['update:visible']);
 
-let timer = null
+let timer = null;
+
+const close = () => {
+  clearTimer();
+  emit('update:visible', false);
+};
 
 const startTimer = () => {
+  clearTimer();
+
   if (props.duration > 0) {
-    timer = setTimeout(() => {
-      close()
-    }, props.duration)
+    timer = setTimeout(close, props.duration);
   }
-}
+};
 
 const clearTimer = () => {
   if (timer) {
-    clearTimeout(timer)
-    timer = null
+    clearTimeout(timer);
+    timer = null;
   }
-}
+};
 
-const close = () => {
-  clearTimer()
-  emit('update:visible', false)
-}
-
-watch(() => props.visible, (newVal) => {
-  if (newVal) {
-    startTimer()
-  } else {
-    clearTimer()
+watch(
+  () => props.visible,
+  (newVal) => {
+    if (newVal) {
+      startTimer();
+    } else {
+      clearTimer();
+    }
   }
-})
+);
 
-onUnmounted(() => {
-  clearTimer()
-})
+onUnmounted(clearTimer);
 </script>
-
-<style scoped>
+<style scoped lang="scss">
+@import '@/assets/variables.scss';
 .base-toast {
   position: fixed;
-  top: 24px;
-  right: 24px;
+  z-index: 10001;
   display: flex;
   align-items: center;
-  padding: 16px;
+  min-height: 40px;
   border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  background-color: #fff;
-  z-index: 10000;
-  min-width: 300px;
+  overflow: hidden;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
-.toast-success {
-  border-left: 4px solid #1fac54;
+.toast-top-center {
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
-.toast-error {
-  border-left: 4px solid #e35656;
-}
-
-.toast-warning {
-  border-left: 4px solid #f19e38;
+.toast-top-right {
+  top: 24px;
+  right: 24px;
 }
 
 .toast-icon {
-  margin-right: 12px;
-  font-size: 16px;
-  font-weight: bold;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  flex-shrink: 0;
 }
-
-.toast-success .icon-success { color: #fff; background-color: #1fac54; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; }
-.toast-error .icon-error { color: #fff; background-color: #e35656; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; }
-.toast-warning .icon-warning { color: #fff; background-color: #f19e38; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; }
 
 .toast-message {
-  flex: 1;
-  font-size: 14px;
-  color: #1f1f1f;
-}
-
-.toast-close {
-  background: transparent;
-  border: none;
-  font-size: 20px;
-  color: #7a8188;
-  cursor: pointer;
-  margin-left: 12px;
+  min-width: 126px;
+  height: 40px;
+  padding: 0 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  font-size: 14px;
+  color: #111;
+  box-sizing: border-box;
 }
 
-.toast-close:hover {
-  color: #1f1f1f;
+.toast-success {
+  border: 1px solid $primary-green;
+  background-color: $primary-background;
+}
+
+.toast-success .toast-icon {
+  background-color: #00c853;
+}
+
+.toast-error {
+  border: 1px solid #f06b6b;
+  background-color: #fff0f0;
+}
+
+.toast-error .toast-icon {
+  background-color: #e53935;
+}
+
+.toast-warning {
+  border: 1px solid #f3b64d;
+  background-color: #fff7e6;
+}
+
+.toast-warning .toast-icon {
+  background-color: #f5a623;
+}
+
+.toast-check {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.toast-check::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .toast-fade-enter-active,
 .toast-fade-leave-active {
-  transition: all 0.3s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .toast-fade-enter-from,
 .toast-fade-leave-to {
   opacity: 0;
-  transform: translateX(100%);
+}
+
+.toast-top-center.toast-fade-enter-from,
+.toast-top-center.toast-fade-leave-to {
+  transform: translate(-50%, -8px);
+}
+
+.toast-top-right.toast-fade-enter-from,
+.toast-top-right.toast-fade-leave-to {
+  transform: translateY(-8px);
 }
 </style>

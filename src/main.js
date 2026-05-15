@@ -22,9 +22,10 @@ import BaseCheckBox from '@/components/base/baseInput/BaseCheckBox.vue'
 import BaseToolTip from '@/components/base/BaseToolTip.vue'
 import BaseRadio from '@/components/base/baseInput/BaseRadio.vue'
 import BaseTextUnderline from '@/components/base/baseInput/BaseTextUnderline.vue'
+import BaseConfirmModal from '@/components/base/baseModal/BaseConfirmModal.vue'
 const app = createApp(App)
 app.component('ModalBasis', ModalBasis)
-
+app.component('BaseConfirmModal', BaseConfirmModal)
 app.component('BaseButton', BaseButton)
 app.component('BaseSelectBox', BaseSelectBox)
 app.component('BaseInput', BaseInput)

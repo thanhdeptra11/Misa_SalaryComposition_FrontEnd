@@ -113,7 +113,7 @@ const props = defineProps({
     default: ''
   },
   dropDownBoxWidth: {
-    type: String,
+    type: Number,
     default: '250px'
   }
 });

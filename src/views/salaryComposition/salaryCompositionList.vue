@@ -35,7 +35,12 @@
           <GridData :columns="tableColumns" :data="tableData" :actionButtons="actionButtons">
             
             <template #valueExpressionTemplate="{ value }">
+              <!-- Nếu công thức rỗng thì hiển thị dấu -, không render editor trống -->
+              <span v-if="value === null || value === undefined || String(value).trim() === ''">
+                -
+              </span>  
               <prism-editor 
+                v-else
                 class="excel-formula-editor" 
                 :modelValue="value || ''" 
                 :highlight="highlighter" 
@@ -62,7 +67,8 @@
     </div>
   </div>
   <!-- Hiển thị form -->
-  <SalaryCompositionForm v-else @back="isShowingForm = false" />
+  <SalaryCompositionForm v-else @back="isShowingForm = false" @saved="handleFormSaved" />
+  
 </template>
 
 <script setup>
@@ -124,7 +130,13 @@ const fetchUnitOptions = async () => {
     console.error("Lỗi khi lấy dữ liệu phòng ban:", error);
   }
 };
+const handleFormSaved = async () => {
+  // Reset về trang đầu để bản ghi mới có khả năng xuất hiện ngay
+  pagingPayload.pageNumber = 1;
 
+  // Gọi lại API để lấy danh sách mới nhất
+  await fetchData();
+};
 // -- Table config --
 const tableColumns = ref([
   { field: 'compositionCode', title: 'Mã thành phần', width: 200, fixed: true },
