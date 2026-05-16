@@ -118,6 +118,8 @@ import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
 import enumService from '@/services/enumService'
 import organizationService from '@/services/organizationService'
 import salaryCompositionService from '@/services/salaryCompositionService'
+import { t } from '@/utils/resourseReader'
+
 
 // Hàm highlight syntax cho Prism
 const highlighter = (code) => {
@@ -167,7 +169,7 @@ const handleConfirmDelete = async () => {
     salaryCompositionToDelete.value.salaryCompositionId;
 
   if (!deleteId) {
-    showError('Không tìm thấy bản ghi');
+    showError(error.message || t('message.activities.deleteError'));
     isShowDeleteConfirmModal.value = false;
     return;
   }
@@ -177,7 +179,7 @@ const handleConfirmDelete = async () => {
 
     await salaryCompositionService.delete(deleteId);
 
-    showSuccess('Xóa thành công');
+    showSuccess(t('message.activities.deleteSuccess'));
 
     isShowDeleteConfirmModal.value = false;
     salaryCompositionToDelete.value = null;
@@ -189,7 +191,7 @@ const handleConfirmDelete = async () => {
     await fetchData();
   } catch (error) {
     console.error('Lỗi khi xóa thành phần lương:', error);
-    showError('Xóa thất bại');
+    showError(t('message.activities.deleteError'));
   } finally {
     isDeleting.value = false;
   }
@@ -205,15 +207,17 @@ const fetchUnitOptions = async () => {
     console.error("Lỗi khi lấy dữ liệu phòng ban:", error);
   }
 };
-const handleFormSaved = async () => {
-  // Sau khi thêm/sửa thành công thì đóng form
-  handleCloseForm();
-
+const handleFormSaved = async (mode) => {
   // Reset về trang đầu để bản ghi mới/cập nhật dễ thấy hơn
   pagingPayload.pageNumber = 1;
-
   // Gọi lại API để lấy danh sách mới nhất
   await fetchData();
+  
+  if (mode === 'clone') {
+    return; // giữ nguyên form, không quay về list
+  }
+  // Sau khi thêm/sửa thành công thì đóng form
+  handleCloseForm();
 };
 
 const handleCloseForm = () => {
@@ -227,17 +231,17 @@ const handleCloseForm = () => {
 const tableColumns = ref([
   { field: 'compositionCode', title: 'Mã thành phần', width: 200, fixed: true },
   { field: 'organizationName', title: 'Đơn vị áp dụng', width: 250 },
-  { field: 'compositionType', title: 'Loại thành phần', width: 200 },
-  { field: 'property', title: 'Tính chất', width: 150 },
-  { field: 'taxableType', title: 'Chịu thuế', width: 150 },
+  { field: 'compositionTypeDesc', title: 'Loại thành phần', width: 200 },
+  { field: 'propertyDesc', title: 'Tính chất', width: 150 },
+  { field: 'taxableTypeDesc', title: 'Chịu thuế', width: 150 },
   { field: 'taxDeductionType', title: 'Giảm trừ khi tính thuế', width: 200 },
   { field: 'norm', title: 'Định mức', width: 150 },
-  { field: 'valueType', title: 'Kiểu giá trị', width: 150 },
+  { field: 'valueTypeDesc', title: 'Kiểu giá trị', width: 150 },
   { field: 'valueExpression', title: 'Giá trị', width: 250, cellTemplate: 'valueExpressionTemplate' },
   { field: 'description', title: 'Mô tả', width: 250 },
-  { field: 'showOnPayslip', title: 'Hiển thị trên phiếu lương', width: 200 },
+  { field: 'showOnPayslipDesc', title: 'Hiển thị trên phiếu lương', width: 200 },
   { field: 'creationSource', title: 'Nguồn tạo', width: 150 },
-  { field: 'status', title: 'Trạng thái', width: 150, cellTemplate: 'statusTemplate' },
+  { field: 'statusDesc', title: 'Trạng thái', width: 150, cellTemplate: 'statusTemplate' },
   { field: 'compositionName', title: 'Tên thành phần', width: 250 }
 ]);
 const {
@@ -260,37 +264,37 @@ const {
     {
       enumName: ENUM_NAMES.COMPOSITION_TYPE,
       sourceField: 'compositionType',
-      targetField: 'compositionType',
+      targetField: 'compositionTypeDesc',
       fallback: '-'
     },
     {
       enumName: ENUM_NAMES.FOLLOW_STATUS,
       sourceField: 'status',
-      targetField: 'status',
+      targetField: 'statusDesc',
       fallback: '-'
     },
     {
       enumName: ENUM_NAMES.COMPOSITION_PROPERTY,
       sourceField: 'property',
-      targetField: 'property',
+      targetField: 'propertyDesc',
       fallback: '-'
     },
     {
       enumName: ENUM_NAMES.TAX_APPLIED_TYPE,
       sourceField: 'taxableType',
-      targetField: 'taxableType',
+      targetField: 'taxableTypeDesc',
       fallback: '-'
     },
     {
       enumName: ENUM_NAMES.MI_VALUE_TYPE,
       sourceField: 'valueType',
-      targetField: 'valueType',
+      targetField: 'valueTypeDesc',
       fallback: '-'
     },
     {
       enumName: ENUM_NAMES.DISPLAY_PAYROLL_TYPE,
       sourceField: 'showOnPayslip',
-      targetField: 'showOnPayslip',
+      targetField: 'showOnPayslipDesc',
       fallback: '-'
     }
   ]
@@ -315,7 +319,9 @@ const actionButtons = [
     hint: 'Nhân bản',
     icon: 'icon_copy_primary',
     onClick: (row) => {
-      alert('Clone ' + row.compositionName)
+      editingItem.value = row;
+      formMode.value = 'clone';
+      isShowingForm.value = true;
     }
   },
   {

@@ -139,9 +139,9 @@ const handleSelectSearchItem = selectSearchItem
 const tableColumns = ref([
   { field: 'compositionCode', title: 'Mã thành phần', minWidth: 260, fixed: true },
   { field: 'compositionName', title: 'Tên thành phần', minWidth: 320 },
-  { field: 'compositionTypeDescription', title: 'Loại thành phần', width: 200 },
-  { field: 'propertyDescription', title: 'Tính chất', width: 160 },
-  { field: 'valueTypeDescription', title: 'Kiểu giá trị', width: 160 },
+  { field: 'compositionTypeDesc', title: 'Loại thành phần', width: 200 },
+  { field: 'propertyDesc', title: 'Tính chất', width: 160 },
+  { field: 'valueTypeDesc', title: 'Kiểu giá trị', width: 160 },
   { field: 'valueExpression', title: 'Giá trị', width: 260, cellTemplate: 'valueExpressionTemplate' }
 ]);
 
@@ -155,7 +155,6 @@ const compositionTypeOptions = ref([]);
 const currentCompositionType = ref(GLOBAL_CONSTANTS.DEFAULT_STATUS_FILTER);
 const fetchCompositionTypeOptions = () => {
   try {
-    debugger
     compositionTypeOptions.value = getEnumOptions(ENUM_NAMES.COMPOSITION_TYPE,
       {value: GLOBAL_CONSTANTS.DEFAULT_STATUS_FILTER, label: "Tất cả thành phần"}
     );

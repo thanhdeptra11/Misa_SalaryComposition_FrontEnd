@@ -278,7 +278,7 @@ const { showSuccess, showError } = useToast();
 // Mode state
 // ========================
 const isEditMode = computed(() => props.mode === 'edit');
-
+const isCloneMode = computed(() => props.mode === 'clone');
 // Cờ này dùng để tránh watcher tự sinh mã chạy nhầm lúc đang bind dữ liệu sửa
 const isBindingForm = ref(false);
 
@@ -533,6 +533,7 @@ const resetForm = () => {
 };
 
 const bindFormData = (item) => {
+  debugger
   isBindingForm.value = true;
 
   try {
@@ -543,6 +544,13 @@ const bindFormData = (item) => {
 
     // Bind các field có mapping 1-1 giữa API và form
     Object.keys(editFieldMap).forEach((fieldName) => {
+      const shouldSkipWhenClone =
+        isCloneMode.value &&
+        ['compositionCode', 'compositionName'].includes(fieldName);
+      if (shouldSkipWhenClone) {
+        formFields[fieldName].value = cloneDefaultValue(defaultFormValues[fieldName]);
+        return;
+      }
       const apiFieldName = editFieldMap[fieldName];
       const defaultValue = cloneDefaultValue(defaultFormValues[fieldName]);
 
@@ -663,13 +671,13 @@ const handleSave = async () => {
     }
 
     // Báo cho list biết đã lưu thành công để đóng form và fetch lại
-    emit('saved');
+    emit('saved', props.mode);
     return true;
   } catch (error) {
-    showError(
-      isEditMode.value
+    showError( error.message ||
+      (isEditMode.value
         ? t('message.activities.updateError')
-        : t('message.activities.createError')
+        : t('message.activities.createError'))
     );
 
     return false;
