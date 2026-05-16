@@ -23,7 +23,8 @@
           :searchResults="searchResults"
           class="tool_bar"
           labelKey="compositionName"
-          :statusOptions="statusOptions"
+          :dropdownOptions="compositionTypeOptions"
+          v-model:selectedItem="currentCompositionType"
           :show-unit-filter="false"
           :show-status-filter="true"
           @search="handleSearch"
@@ -36,11 +37,11 @@
 
         <GridData
           :columns="tableColumns"
-          :data="displayTableData"
+          :data="tableData"
         >
           <template #valueExpressionTemplate="{ value }">
             <!-- Cột Giá trị dùng template riêng nên phải tự fallback dấu - -->
-            <span v-if="isEmptyCellValue(value)">-</span>
+            <span v-if="!value || value === ''">-</span>
 
             <prism-editor
               v-else
@@ -55,7 +56,7 @@
         <GridDataFooter
           v-model:currentPage="currentPage"
           v-model:pageSize="pageSize"
-          :totalRecords="filteredTableData.length"
+          :totalRecords="totalRecords"
         />
       </div>
     </div>
@@ -63,36 +64,78 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-
+import { useGridData } from '@/components/base/composables/useGridData.js'
+import { ENUM_NAMES, getEnumOptions } from '@/constants/enumDisplayConstants'
 import GridData from '@/components/base/baseGridData/GridData.vue';
 import GridDataToolbar from '@/components/base/baseGridData/GridDataToolbar.vue';
 import GridDataFooter from '@/components/base/baseGridData/GridDataFooter.vue';
 import salaryCompositionSystemService from '@/services/salaryCompositionSystemService';
 import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
-import enumService from '@/services/enumService';
 import { highlight } from 'prismjs/components/prism-core';
 import Prism from '@/utils/prismExcel.js';
 import { PrismEditor } from 'vue-prism-editor';
 import 'vue-prism-editor/dist/prismeditor.min.css';
 
 const router = useRouter();
+const {
+  tableData,
+  totalRecords,
+  searchResults,
+  pagingPayload,
+  currentPage,
+  pageSize,
+  fetchData,
+  fetchSearchSuggestions,
+  selectSearchItem,
+  setDefaultableFilter,
+} = useGridData(salaryCompositionSystemService, {
+  defaultPageNumber: 1,
+  defaultPageSize: 15,
+  getSearchTermFromItem: (item) => item.compositionCode,
+  enumConfigs: [
+    {
+      enumName: ENUM_NAMES.COMPOSITION_TYPE,
+      sourceField: 'compositionType',
+      targetField: 'compositionType',
+      fallback: '-'
+    },
+    {
+      enumName: ENUM_NAMES.FOLLOW_STATUS,
+      sourceField: 'status',
+      targetField: 'status',
+      fallback: '-'
+    },
+    {
+      enumName: ENUM_NAMES.COMPOSITION_PROPERTY,
+      sourceField: 'property',
+      targetField: 'property',
+      fallback: '-'
+    },
+    {
+      enumName: ENUM_NAMES.TAX_APPLIED_TYPE,
+      sourceField: 'taxableType',
+      targetField: 'taxableType',
+      fallback: '-'
+    },
+    {
+      enumName: ENUM_NAMES.MI_VALUE_TYPE,
+      sourceField: 'valueType',
+      targetField: 'valueType',
+      fallback: '-'
+    },
+    {
+      enumName: ENUM_NAMES.DISPLAY_PAYROLL_TYPE,
+      sourceField: 'showOnPayslip',
+      targetField: 'showOnPayslip',
+      fallback: '-'
+    }
+  ]
+})
 
-// Dữ liệu gốc lấy từ API getAll
-const tableData = ref([]);
-
-// Dữ liệu gợi ý khi search trên toolbar
-const searchResults = ref([]);
-
-// Từ khóa search hiện tại để filter client-side
-const searchKeyword = ref('');
-
-// Vì API getAll trả toàn bộ dữ liệu nên phân trang ở FE
-const currentPage = ref(1);
-const pageSize = ref(15);
-// Lấy dữ liệu statusOptions
-const statusOptions = ref([GLOBAL_CONSTANTS.DEFAULT_STATUS_FILTER]);
+const handleSearch = fetchSearchSuggestions
+const handleSelectSearchItem = selectSearchItem
 const tableColumns = ref([
   { field: 'compositionCode', title: 'Mã thành phần', minWidth: 260, fixed: true },
   { field: 'compositionName', title: 'Tên thành phần', minWidth: 320 },
@@ -108,110 +151,34 @@ const highlighter = (code) => {
 
   return highlight(code, Prism.languages.excel, 'excel');
 };
-
-const isEmptyCellValue = (value) => {
-  // Chỉ coi null, undefined, chuỗi rỗng là không có dữ liệu
-  return value === null || value === undefined || String(value).trim() === '';
-};
-
-const formatCellValue = (value) => {
-  // Chuẩn hóa dữ liệu rỗng về "-" cho các cột không dùng template
-  return isEmptyCellValue(value) ? '-' : value;
-};
-
-const normalizeSystemComposition = (item) => {
-  // Chỉ format các cột đang hiển thị để tránh làm biến dạng dữ liệu gốc không dùng tới
-  return {
-    ...item,
-    compositionCode: formatCellValue(item.compositionCode),
-    compositionName: formatCellValue(item.compositionName),
-    compositionTypeDescription: formatCellValue(item.compositionTypeDescription),
-    propertyDescription: formatCellValue(item.propertyDescription),
-    valueTypeDescription: formatCellValue(item.valueTypeDescription)
-  };
-};
-const fetchStatusOptions = async () => {
+const compositionTypeOptions = ref([]);
+const currentCompositionType = ref(GLOBAL_CONSTANTS.DEFAULT_STATUS_FILTER);
+const fetchCompositionTypeOptions = () => {
   try {
-    const data = await enumService.getEnumByName('FollowStatus');
-    if (data && Array.isArray(data)) {
-      statusOptions.value = data.map(item => ({
-        label: item.description,
-        value: item.value
-      }));
-      // Cập nhật giá trị hiện tại nếu giá trị đang có không nằm trong danh sách
-      if (statusOptions.value.length > 0 && !statusOptions.value.some(o => o.value === currentStatus.value)) {
-        currentStatus.value = statusOptions.value[0].value;
-      }
-    }
+    debugger
+    compositionTypeOptions.value = getEnumOptions(ENUM_NAMES.COMPOSITION_TYPE,
+      {value: GLOBAL_CONSTANTS.DEFAULT_STATUS_FILTER, label: "Tất cả thành phần"}
+    );
   } catch (error) {
-    console.error("Lỗi khi lấy dữ liệu FollowStatus:", error);
-  }
-}
-
-const fetchData = async () => {
-  try {
-    // Màn danh mục hệ thống lấy dữ liệu từ API getAll
-    const response = await salaryCompositionSystemService.getAll();
-
-    tableData.value = Array.isArray(response)
-      ? response.map(normalizeSystemComposition)
-      : [];
-  } catch (error) {
-    console.error('Lỗi khi lấy danh mục thành phần lương hệ thống:', error);
-    tableData.value = [];
+    console.error("Lỗi khi lấy dữ liệu thành phần:", error);
   }
 };
-
-const filteredTableData = computed(() => {
-  const keyword = searchKeyword.value.trim().toLowerCase();
-
-  // Không có từ khóa thì hiển thị toàn bộ danh sách
-  if (!keyword) return tableData.value;
-
-  return tableData.value.filter((item) => {
-    const compositionCode = String(item.compositionCode ?? '').toLowerCase();
-    const compositionName = String(item.compositionName ?? '').toLowerCase();
-
-    return compositionCode.includes(keyword) || compositionName.includes(keyword);
-  });
-});
-
-const displayTableData = computed(() => {
-  // Cắt dữ liệu theo trang hiện tại
-  const startIndex = (currentPage.value - 1) * pageSize.value;
-  const endIndex = startIndex + pageSize.value;
-
-  return filteredTableData.value.slice(startIndex, endIndex);
-});
-
-const handleSearch = (keyword) => {
-  // Search client-side vì API getAll đã có toàn bộ dữ liệu
-  searchKeyword.value = keyword || '';
-  currentPage.value = 1;
-
-  if (!searchKeyword.value.trim()) {
-    searchResults.value = [];
-    return;
-  }
-
-  searchResults.value = filteredTableData.value.slice(0, 10);
-};
-
-const handleSelectSearchItem = (item) => {
-  // Chọn suggestion thì dùng tên/mã của item làm từ khóa lọc
-  searchKeyword.value = item?.compositionName || item?.compositionCode || '';
-  searchResults.value = [];
-  currentPage.value = 1;
-};
-
 const handleBack = () => {
   // Quay lại màn danh sách thành phần lương
   router.push('/payroll/salarycomposition');
 };
-
+// Watch để theo dõi trạng thái để build filter
+watch(currentCompositionType, async (newVal) => {
+  await setDefaultableFilter({
+    property: 'composition_type',
+    value: newVal,
+    defaultValue: GLOBAL_CONSTANTS.DEFAULT_STATUS_FILTER,
+    dataType: 'number'
+  })
+})
 onMounted(() => {
   fetchData();
-  fetchStatusOptions();
+  fetchCompositionTypeOptions();
 });
 </script>
 

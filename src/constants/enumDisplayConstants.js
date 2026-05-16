@@ -1,6 +1,11 @@
 export const ENUM_NAMES = {
   COMPOSITION_TYPE: 'CompositionType',
-  FOLLOW_STATUS: 'FollowStatus'
+  FOLLOW_STATUS: 'FollowStatus',
+  COMPOSITION_PROPERTY: 'CompositionProperty',
+  DISPLAY_PAYROLL_TYPE: 'DisplayPayrollType',
+  MI_VALUE_TYPE: 'MIValueType',
+  TAX_APPLIED_TYPE: 'TaxAppliedType',
+
 };
 
 export const ENUM_DISPLAY_MAPS = {
@@ -19,7 +24,29 @@ export const ENUM_DISPLAY_MAPS = {
   [ENUM_NAMES.FOLLOW_STATUS]: {
     1: 'Đang theo dõi',
     0: 'Ngừng theo dõi'
+  },
+  [ENUM_NAMES.COMPOSITION_PROPERTY]: {
+    1: 'Thu nhập',
+    2: 'Khấu trừ',
+    3: 'Khác'
+  },
+  [ENUM_NAMES.DISPLAY_PAYROLL_TYPE]:{
+    1:"Có",
+    2:"Không",
+    3:"Chỉ hiển thị nếu giá trị khác 0"
+  },
+  [ENUM_NAMES.MI_VALUE_TYPE]:{
+    1:"Số",
+    2:"Văn bản",
+    3:"Ngày tháng",
+    4:"Tiền tệ"
+  },
+  [ENUM_NAMES.TAX_APPLIED_TYPE]:{
+    1:"Chịu thuế",
+    2: "Miễn thuế toàn phần",
+    3: "Miễn thuế một phần"
   }
+
 };
 
 const isEmptyValue = (value) => {

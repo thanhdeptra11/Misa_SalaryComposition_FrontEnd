@@ -19,8 +19,8 @@
         <!-- Default items if nothing is passed -->
         <BaseDropdown 
           v-if="showStatusFilter"
-          v-model="internalStatus"
-          :options="statusOptions"
+          v-model="selectedItem"
+          :options="dropdownOptions"
           variant="borderless"
           placeholder="Tất cả trạng thái"
         >
@@ -51,7 +51,7 @@ import BaseHierachyTree from '@/components/base/baseInput/BaseHierachyTree.vue'
 import BaseButton from '@/components/base/baseButton/BaseButton.vue'
 
 const props = defineProps({
-  statusFilterValue: { type: [String, Number], default: '' },
+  selectedItem: { type: [String, Number], default: '' },
   unitFilterValue: { type: [Array, String, Number], default: () => [] },
   
   // Controls what default elements to show
@@ -62,7 +62,7 @@ const props = defineProps({
   labelKey: { type: String, default: '' },
   
   // Options for dropdowns
-  statusOptions: { 
+  dropdownOptions: { 
     type: Array, 
     default: () => [] 
   },
@@ -80,11 +80,11 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['search','selectSearchItem', 'update:statusFilterValue', 'update:unitFilterValue'])
-const internalStatus = ref(props.statusFilterValue || (props.statusOptions && props.statusOptions[0]?.value) || '')
+const emit = defineEmits(['search','selectSearchItem', 'update:selectedItem', 'update:unitFilterValue'])
+const selectedItem = ref(props.selectedItem || (props.dropdownOptions && props.dropdownOptions[0]?.value) || '')
 const internalUnit = ref(Array.isArray(props.unitFilterValue) ? props.unitFilterValue : [])
 
-watch(internalStatus, (val) => emit('update:statusFilterValue', val))
+watch(selectedItem, (val) => emit('update:selectedItem', val))
 watch(internalUnit, (val) => emit('update:unitFilterValue', val))
 </script>
 

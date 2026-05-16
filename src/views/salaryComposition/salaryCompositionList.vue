@@ -20,9 +20,9 @@
         class="tool_bar"
         @search="handleSearch"
         @selectSearchItem="handleSelectSearchItem"
-        v-model:statusFilterValue="currentStatus"
+        v-model:selectedItem="currentStatus"
         v-model:unitFilterValue="currentUnits"
-        :statusOptions="statusOptions"
+        :dropdownOptions="statusOptions"
         :unitOptions="unitOptions"
         placeholder="Tất cả đơn vị"  
         labelKey="compositionName"
@@ -49,12 +49,19 @@
             </template>
 
             <template #statusTemplate="{ value }">
-              <span v-if="value == 1" style="color: #00a85a; display: flex; align-items: start; gap: 4px;">
+              <span
+                v-if="value === 'Đang theo dõi'"
+                style="color: #00a85a; display: flex; align-items: start; gap: 4px;"
+              >
                 Đang theo dõi
               </span>
-              <span v-else style="color: #ff9800; display: flex; align-items: start; gap: 4px;">
+              <span
+                v-else-if="value === 'Ngừng theo dõi'"
+                style="color: #ff9800; display: flex; align-items: start; gap: 4px;"
+              >
                 Ngừng theo dõi
               </span>
+              <span v-else>-</span>
             </template>
           </GridData>
           
@@ -92,6 +99,8 @@
 import { ref, onMounted, watch, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/components/base/composables/useToast.js'
+import { useGridData } from '@/components/base/composables/useGridData.js'
+import { ENUM_NAMES } from '@/constants/enumDisplayConstants'
 import Header from '@/components/mainViewComponents/Header.vue'
 import GridDataToolbar from '@/components/base/baseGridData/GridDataToolbar.vue'
 import GridData from '@/components/base/baseGridData/GridData.vue'
@@ -218,25 +227,78 @@ const handleCloseForm = () => {
 const tableColumns = ref([
   { field: 'compositionCode', title: 'Mã thành phần', width: 200, fixed: true },
   { field: 'organizationName', title: 'Đơn vị áp dụng', width: 250 },
-  { field: 'compositionTypeDescription', title: 'Loại thành phần', width: 200 },
-  { field: 'propertyDescription', title: 'Tính chất', width: 150 },
-  { field: 'taxableTypeDescription', title: 'Chịu thuế', width: 150 },
+  { field: 'compositionType', title: 'Loại thành phần', width: 200 },
+  { field: 'property', title: 'Tính chất', width: 150 },
+  { field: 'taxableType', title: 'Chịu thuế', width: 150 },
   { field: 'taxDeductionType', title: 'Giảm trừ khi tính thuế', width: 200 },
   { field: 'norm', title: 'Định mức', width: 150 },
-  { field: 'valueTypeDescription', title: 'Kiểu giá trị', width: 150 },
+  { field: 'valueType', title: 'Kiểu giá trị', width: 150 },
   { field: 'valueExpression', title: 'Giá trị', width: 250, cellTemplate: 'valueExpressionTemplate' },
   { field: 'description', title: 'Mô tả', width: 250 },
-  { field: 'showOnPayslipDescription', title: 'Hiển thị trên phiếu lương', width: 200 },
+  { field: 'showOnPayslip', title: 'Hiển thị trên phiếu lương', width: 200 },
   { field: 'creationSource', title: 'Nguồn tạo', width: 150 },
   { field: 'status', title: 'Trạng thái', width: 150, cellTemplate: 'statusTemplate' },
   { field: 'compositionName', title: 'Tên thành phần', width: 250 }
 ]);
+const {
+  tableData,
+  totalRecords,
+  searchResults,
+  pagingPayload,
+  currentPage,
+  pageSize,
+  fetchData,
+  fetchSearchSuggestions,
+  selectSearchItem,
+  setDefaultableFilter,
+  setMultiValueFilter
+} = useGridData(salaryCompositionService, {
+  defaultPageNumber: 1,
+  defaultPageSize: 15,
+  getSearchTermFromItem: (item) => item.compositionCode,
+  enumConfigs: [
+    {
+      enumName: ENUM_NAMES.COMPOSITION_TYPE,
+      sourceField: 'compositionType',
+      targetField: 'compositionType',
+      fallback: '-'
+    },
+    {
+      enumName: ENUM_NAMES.FOLLOW_STATUS,
+      sourceField: 'status',
+      targetField: 'status',
+      fallback: '-'
+    },
+    {
+      enumName: ENUM_NAMES.COMPOSITION_PROPERTY,
+      sourceField: 'property',
+      targetField: 'property',
+      fallback: '-'
+    },
+    {
+      enumName: ENUM_NAMES.TAX_APPLIED_TYPE,
+      sourceField: 'taxableType',
+      targetField: 'taxableType',
+      fallback: '-'
+    },
+    {
+      enumName: ENUM_NAMES.MI_VALUE_TYPE,
+      sourceField: 'valueType',
+      targetField: 'valueType',
+      fallback: '-'
+    },
+    {
+      enumName: ENUM_NAMES.DISPLAY_PAYROLL_TYPE,
+      sourceField: 'showOnPayslip',
+      targetField: 'showOnPayslip',
+      fallback: '-'
+    }
+  ]
+})
 
-const tableData = ref([]);
-// Phân trang
-const totalRecords = ref(0);
-// State cho searchDropdown
-const searchResults = ref([]);
+const handleSearch = fetchSearchSuggestions
+const handleSelectSearchItem = selectSearchItem
+
 // State mode hiện tại của form
 const formMode = ref('create');
 // Dữ liệu dòng đang sửa, truyền xuống form để bind
@@ -288,89 +350,29 @@ const highestSelectedIds = computed(() => {
     return org && !selectedSet.has(org.parentId)
   })
 })
-// Watch để theo dõi gọi api để fetch lại dùng cho đơn vị
+// Watch để theo dõi đơn vị để build filter cho một list param cùng property
 watch(highestSelectedIds, async (newVals) => {
-  pagingPayload.pageNumber = 1
-  // Giữ filter trạng thái (nếu có), thay thế filter đơn vị
-  const statusFilter = pagingPayload.filters.filter(f => f.property === 'status')
-  pagingPayload.filters = [
-    ...statusFilter,
-    ...newVals.map(id => ({
-      dataType: "string",
-      value: id,
-      operator: "=",
-      property: "organization_id"
-    }))
-  ]
-  await fetchData()
+  await setMultiValueFilter({
+    property: 'organization_id',
+    values: newVals,
+    dataType: 'string'
+  })
 })
-
-// Nguồn sự thật duy nhất cho phân trang và filter
-const pagingPayload = reactive({
-  pageNumber: 1,
-  pageSize: 15,
-  searchTerm: "",
-  filters: []
+// Watch để theo dõi trạng thái để build filter
+watch(currentStatus, async (newVal) => {
+  await setDefaultableFilter({
+    property: 'status',
+    value: newVal,
+    defaultValue: GLOBAL_CONSTANTS.DEFAULT_STATUS_FILTER,
+    dataType: 'number'
+  })
 })
-
-// Computed để đồng bộ với GridDataFooter (v-model)
-const currentPage = computed({
-  get: () => pagingPayload.pageNumber,
-  set: (val) => { pagingPayload.pageNumber = val }
-})
-const pageSize = computed({
-  get: () => pagingPayload.pageSize,
-  set: (val) => {
-    pagingPayload.pageSize = val
-    pagingPayload.pageNumber = 1 // Reset về trang 1 khi đổi pageSize
-  }
-})
-
-// Hàm fetch duy nhất - luôn dùng pagingPayload
-const fetchData = async () => {
-  try {
-    const res = await salaryCompositionService.getPaging({ ...pagingPayload })
-    if (res && res.data) {
-      tableData.value = Array.isArray(res.data) ? res.data : (res.data.data || [])
-      totalRecords.value = res.totalRecords || 0
-    }
-  } catch (error) {
-    console.error("Lỗi khi lấy dữ liệu Grid:", error)
-  }
-}
-
-// Gọi lại api khi thay đổi trang hoặc số bản ghi/trang
-watch([() => pagingPayload.pageNumber, () => pagingPayload.pageSize], () => {
-  fetchData()
-})
-
-// Gọi api khi thay đổi giá trị trạng thái
-watch(currentStatus, (status) => {
-  handleFilterByStatus(status)
-})
-
 onMounted(() => {
   fetchStatusOptions();
   fetchUnitOptions();
   fetchData();
 });
 
-const handleSearch = async (keyword) => {
-  if (!keyword?.trim()) {
-    searchResults.value = []
-    pagingPayload.searchTerm = ''
-    pagingPayload.pageNumber = 1
-    fetchData()
-    return
-  }
-  try {
-    // Tìm kiếm gợi ý (dropdown) dùng payload tạm, không ảnh hưởng phân trang
-    const res = await salaryCompositionService.getPaging({ ...pagingPayload, searchTerm: keyword, pageNumber: 1 })
-    searchResults.value = Array.isArray(res.data) ? res.data : (res.data?.data || [])
-  } catch (error) {
-    console.error(error)
-  }
-};
 
 // Xử lý khi click vào phần chính của button (bên trái mũi tên)
 const handleMainClick = () => {
@@ -390,8 +392,6 @@ const handleEdit = (row) => {
   // Hiển thị form
   isShowingForm.value = true;
 };
-
-
 // Xử lý khi click vào phần mũi tên (dropdown)
 const handleDropdownClick = () => {
   console.log('Dropdown clicked: Mở menu hành động');
@@ -401,35 +401,6 @@ const handleDropdownClick = () => {
 const goToSystemList = () => {
   router.push('/payroll/salarycomposition/system-category');
 };
-// Xử lí khi chọn 1 item từ search
-const handleSelectSearchItem = (item) => {
-  searchResults.value = []
-
-  tableData.value = [item]
-
-  totalRecords.value = 1
-}
-// Xử lí khi lọc theo trạng thái
-const handleFilterByStatus = async (status) => {
-  try {
-    pagingPayload.pageNumber = 1
-    if (status === GLOBAL_CONSTANTS.DEFAULT_STATUS_FILTER) {
-      // Xóa filter trạng thái, giữ lại các filter khác (đơn vị...)
-      pagingPayload.filters = pagingPayload.filters.filter(f => f.property !== 'status')
-    } else {
-      // Thay thế filter trạng thái hiện tại
-      const otherFilters = pagingPayload.filters.filter(f => f.property !== 'status')
-      pagingPayload.filters = [
-        ...otherFilters,
-        { dataType: 'int', value: status, operator: '=', property: 'status' }
-      ]
-    }
-    await fetchData()
-  } catch (error) {
-    console.error("Lỗi khi lọc theo trạng thái:", error)
-  }
-}
-
 </script>
 
 <style lang="scss" scoped>

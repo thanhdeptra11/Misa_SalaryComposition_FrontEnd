@@ -6,7 +6,7 @@ import { mapEnumFieldsForList } from '@/constants/enumDisplayConstants';
  * - GridData
  * - GridDataToolbar
  * - GridDataFooter
- *
+ * 
  * Nguyên tắc:
  * - Luôn lấy dữ liệu qua service.getPaging(payload).
  * - Hỗ trợ search, filter đơn giá trị, filter nhiều giá trị.
