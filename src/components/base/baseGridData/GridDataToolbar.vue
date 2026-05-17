@@ -13,8 +13,16 @@
           <slot name="search-item" :item="item" />
         </template>
       </BaseHeaderSearch>
+      <!-- Bulk actions -->
+      <div v-if="selectedCount > 0" class="selection-summary">
+        <span>Đã chọn <b>{{ selectedCount }}</b></span>
+        <button class="clear-selection" @click="$emit('clearSelection')">
+          Bỏ chọn
+        </button>
+        <slot name="selection-actions" />
+      </div>
     </div>
-    <div class="toolbar-right">
+    <div class="toolbar-right" v-if="selectedCount === 0">
       <slot name="right-actions">
         <!-- Default items if nothing is passed -->
         <BaseDropdown 
@@ -22,7 +30,7 @@
           v-model="selectedItem"
           :options="dropdownOptions"
           variant="borderless"
-          placeholder="Tất cả trạng thái"
+          :dropdown-placeholder="placeholder"
         >
         </BaseDropdown>
        
@@ -74,18 +82,32 @@ const props = defineProps({
     type: String, 
     default: '' 
   },
+  dropdownPlaceholder: { 
+    type: String, 
+    default: '' 
+  },
   searchResults: { 
     type: Array, 
     default: () => [] 
+  },
+  selectedCount: {
+    type: Number,
+    default: 0
   }
 })
 
-const emit = defineEmits(['search','selectSearchItem', 'update:selectedItem', 'update:unitFilterValue'])
+const emit = defineEmits([
+  'search',
+  'selectSearchItem', 
+  'update:selectedItem', 
+  'update:unitFilterValue',
+  'clearSelection'])
 const selectedItem = ref(props.selectedItem || (props.dropdownOptions && props.dropdownOptions[0]?.value) || '')
 const internalUnit = ref(Array.isArray(props.unitFilterValue) ? props.unitFilterValue : [])
 
 watch(selectedItem, (val) => emit('update:selectedItem', val))
 watch(internalUnit, (val) => emit('update:unitFilterValue', val))
+
 </script>
 
 <style scoped lang="scss">
@@ -110,6 +132,20 @@ watch(internalUnit, (val) => emit('update:unitFilterValue', val))
     display: flex;
     align-items: center;
     gap: 16px;
+  }
+  .selection-summary{
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding-left: 20px;
+  }
+  .clear-selection{
+    background-color: transparent !important;
+    border: none !important;
+    color: #34b057 !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
   }
 }
 </style>

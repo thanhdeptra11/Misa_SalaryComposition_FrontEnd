@@ -442,14 +442,11 @@ const isFormDirty = computed(() => {
     compositionProperty.value,
     internalTaxAppliedType.value,
     compositionNorm.value,
-    isValueExceedNorm.value,
-    internalValueType.value,
     ValueoptionModel.value,
     customFormula.value,
     salaryCompositionDescription.value,
     displayPayroll.value
   ];
-
   return valuesNeedCheck.some((value) => !isEmptyValue(value));
 });
 
@@ -533,7 +530,6 @@ const resetForm = () => {
 };
 
 const bindFormData = (item) => {
-  debugger
   isBindingForm.value = true;
 
   try {

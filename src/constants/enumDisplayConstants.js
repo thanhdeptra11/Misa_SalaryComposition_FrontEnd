@@ -66,9 +66,9 @@ const normalizeOptionValue = (value) => {
 */
 export const getEnumText = (enumName, value, fallback = '-') => {
   if (isEmptyValue(value)) return fallback;
-
+  const normalizedValue = typeof value === 'boolean' ? Number(value) : value;
   // Object key trong JS là string, nên ép value về string để map ổn định
-  return ENUM_DISPLAY_MAPS[enumName]?.[String(value)] ?? fallback;
+  return ENUM_DISPLAY_MAPS[enumName]?.[String(normalizedValue)] ?? fallback;
 };
 /**
  * Hàm lấy options cho dropdown

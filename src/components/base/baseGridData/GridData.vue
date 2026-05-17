@@ -1,6 +1,7 @@
 <template>
   <div class="table_scroll">
     <DxDataGrid
+      ref="gridRef"
       id="gridContainer"
       :data-source="data"
       :show-borders="false"
@@ -12,10 +13,13 @@
       :show-row-lines="true"
       :show-column-lines="false"
       @row-click="onRowClick"
+      @selection-changed="onSelectionChanged"
     >
       <DxPaging :enabled="false"/>
       <DxSelection mode="multiple" show-check-boxes-mode="always" />
-      <DxScrolling show-scrollbar="always" />
+      <DxScrolling show-scrollbar="always"
+                   :scroll-by-thumb="true"
+                   :use-native="false" />
       
       <!-- Render dynamic columns -->
       <DxColumn
@@ -48,8 +52,8 @@
             v-for="(btn, index) in actionButtons"
             :key="index"
             variant="icon-only"
-            :icon-class="btn.icon"
-            :title="btn.hint"
+            :icon-class="typeof btn.icon === 'function' ? btn.icon(data.data) : btn.icon"
+            :title="typeof btn.hint === 'function' ? btn.hint(data.data) : btn.hint"
             @click.stop="btn.onClick(data.data)"
           />
         </div>
@@ -65,7 +69,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
   DxDataGrid,
   DxColumn,
@@ -90,8 +94,21 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['rowClick']);
+const emit = defineEmits(['rowClick', 'selectionChanged']);
+// Emit sự kiện tick chọn check box rows
+const onSelectionChanged = (e) => {
+  emit('selectionChanged', e.selectedRowsData);
+};
 
+const gridRef = ref(null);
+
+const clearSelection = () => {
+  gridRef.value?.instance?.clearSelection();
+};
+
+defineExpose({
+  clearSelection
+});
 const columnsWithTemplates = computed(() => {
   return props.columns.filter(col => col.cellTemplate);
 });
@@ -177,17 +194,23 @@ const customizeEmptyCellText = (cellInfo) => {
   background-color: transparent !important;
 }
 
-/* Đổi màu background khi hover vào dòng */
-.dx-datagrid-table .dx-data-row.dx-state-hover > td {
+/* Đổi màu background khi hover vào dòng, Đổi bg khi selected */
+.dx-datagrid-table .dx-data-row.dx-state-hover > td,
+.dx-datagrid-table .dx-data-row.dx-selection > td
+ {
   background-color: #eafbf2 !important;
 }
-
+// Ẩn css trung gian khi chọn 1 vài item
+.dx-datagrid-headers
+  .dx-checkbox-indeterminate
+  .dx-checkbox-icon::before {
+  display: none !important;
+}
 /* Ẩn hiện các nút action khi hover và căn phải */
 .misa-action-buttons {
   display: flex;
   align-items: center;
-  justify-content: flex-end; /* Căn phải */
-  padding-right: 10px; /* Cách mép phải 10px */
+  justify-content: center; /* Căn phải */
   gap: 10px; /* Khoảng cách giữa các icon là 10px */
   visibility: hidden;
 }

@@ -4,12 +4,12 @@
     class="base_button"
     :class="`base_button--${variant}`"
     :title="title"
-    :style="{width: width}"
+    :style="buttonStyle"
     @click="$emit('click', $event)"
   >
     <!--  -->
     <div v-if="iconClass" class="base_button__icon" :class="iconClass"></div>
-    <div v-if="iconClass && variant === 'no_border'" class="base_button__icon--no_border" :class="iconClass"></div>
+    <div v-if="iconClass && variant === 'no-border'" class="base_button__icon--no-border" :class="iconClass"></div>
     <span v-if="variant !== 'icon-only'" class="base_button__text">{{ buttonText }}</span>
     
     <template v-if="variant === 'mixed' || variant === 'combo'">
@@ -28,7 +28,15 @@ const props = defineProps({
   variant: {
     type: String,
     required: true,
-    validator: (v) => ['primary', 'secondary', 'icon', 'icon-only', 'mixed', 'combo', "no-border"].includes(v),
+    validator: (v) => ['primary', 
+    'secondary', 
+    'icon', 
+    'icon-only', 
+    'mixed', 
+    'combo', 
+    "no-border",
+    'outline-color',
+    "text-color"].includes(v),
   },
   iconClass: {
     type: String,
@@ -46,10 +54,17 @@ const props = defineProps({
     type: String,
     default: 'auto',
   },
+  buttonColor: {
+    type: String,
+    default: '',
+  }
 })
 
 defineEmits(['click', 'click-dropdown'])
-
+const buttonStyle = computed(() => ({
+  width: props.width,
+  '--button-color': props.buttonColor || '#34b057'
+}));
 const rootTag = computed(() =>
   props.variant === 'icon' || props.variant === 'icon-only' ? 'div' : 'button',
 )
@@ -61,6 +76,7 @@ const rootTag = computed(() =>
 // --- primary: nền trắng, viền xám, icon + text, hover chuyển xanh lá cây ---
 .base_button--primary {
   display: flex;
+  gap: 5px;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
@@ -243,5 +259,43 @@ const rootTag = computed(() =>
   &:active {
     background-color: #198F3B;
   }
+}
+
+.base_button--outline-color {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--button-color);
+  border-radius: 4px;
+  background-color: #fff;
+  color: var(--button-color);
+
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+
+  .base_button__icon {
+    background-color: var(--button-color) !important;
+  }
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--button-color) 8%, #fff);
+  }
+}
+.base_button--text-color {
+  border: none;
+  background: transparent;
+  color: var(--button-color);
+  padding: 0;
+  min-width: auto !important;
+  height: 36px !important;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
 }
 </style>

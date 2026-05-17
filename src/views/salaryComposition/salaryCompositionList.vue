@@ -4,13 +4,21 @@
     <Header class="header" title="Thành phần lương">
       <template #right>
         <BaseButton @click="goToSystemList" variant="primary" iconClass="icon_scale" buttonText="Danh mục của hệ thống" />
-        <BaseButton 
-          variant="mixed" 
-          iconClass="icon_add" 
-          buttonText="Thêm mới" 
-          @click="handleMainClick"
-          @click-dropdown="handleDropdownClick" 
-        />
+        <div class="add_button_wrapper">
+          <BaseButton 
+            variant="mixed" 
+            iconClass="icon_add" 
+            buttonText="Thêm mới" 
+            @click="handleCreate"
+            @click-dropdown="toggleAddMenu" 
+          />
+
+            <div v-if="isShowAddMenu" class="add_menu">
+              <div class="add_menu_item" @click="openSystemPicker">
+                Chọn từ danh mục của hệ thống
+              </div>
+            </div>
+        </div>
       </template>
     </Header>
 
@@ -18,21 +26,50 @@
       <GridDataToolbar 
         :searchResults="searchResults"
         class="tool_bar"
+        :selectedCount="selectedCount"
+        @clearSelection="handleClearSelection"
         @search="handleSearch"
         @selectSearchItem="handleSelectSearchItem"
         v-model:selectedItem="currentStatus"
         v-model:unitFilterValue="currentUnits"
         :dropdownOptions="statusOptions"
         :unitOptions="unitOptions"
+        dropdownPlaceholder="Tất cả trạng thái"
         placeholder="Tất cả đơn vị"  
         labelKey="compositionName"
       >
         <template #search-item="{ item }">
           <span>{{ item.compositionCode + ' - ' + item.compositionName }}</span>
         </template>
+        <template #selection-actions>
+          <div class="bulk_actions">
+            
+                <BaseButton 
+                variant="outline-color"
+                iconClass="icon_minus_yellow"
+                buttonText="Ngừng theo dõi"
+                buttonColor="#f90" />
+                <BaseButton 
+                variant="outline-color"
+                iconClass="icon_check_green"
+                buttonText="Đang theo dõi"
+                buttonColor="#34b057"
+                />
+                <BaseButton 
+                variant="outline-color"
+                iconClass="icon_trash_red"
+                buttonText="Xóa"
+                buttonColor="#ff6161"
+                />
+          </div>
+        </template>
       </GridDataToolbar>
       
-          <GridData :columns="tableColumns" :data="tableData" :actionButtons="actionButtons">
+          <GridData :columns="tableColumns" 
+          :data="tableData" 
+          :actionButtons="actionButtons"
+          @selectionChanged="setSelectedRows"
+          ref="gridRef">
             
             <template #valueExpressionTemplate="{ value }">
               <!-- Nếu công thức rỗng thì hiển thị dấu -, không render editor trống -->
@@ -91,8 +128,30 @@
   width="500px"
   @confirm="handleConfirmDelete"
 />
-
-  
+<BaseConfirmModal
+  v-model="isShowStatusConfirmModal"
+  title="Chuyển trạng thái"
+  :message="statusConfirmMessage"
+  cancelText="Hủy bỏ"
+  confirmText="Đồng ý"
+  :showSecondary="false"
+  width="500px"
+  @confirm="handleConfirmToggleStatus"
+/>
+<BaseConfirmModal
+  v-model="isShowSystemDeleteWarningModal"
+  title="Thông báo"
+  message="Đây là thành phần lương mặc định của hệ thống nên không thể xóa. Vui lòng kiểm tra lại."
+  confirmText="Đóng"
+  @confirm="isShowSystemDeleteWarningModal = false"
+  :showCancel="false"
+  :showSecondary="false"
+  width="500px"
+/>
+  <SalaryCompositionSystemPickerModal
+  v-model="isShowSystemPickerModal"
+  @saved="fetchData"
+/>
 </template>
 
 <script setup>
@@ -108,30 +167,128 @@ import BaseButton from '@/components/base/baseButton/BaseButton.vue'
 import GridDataFooter from '@/components/base/baseGridData/GridDataFooter.vue'
 import SalaryCompositionForm from './salaryCompositionForm.vue'
 import BaseConfirmModal from '@/components/base/baseModal/BaseConfirmModal.vue'
+import SalaryCompositionSystemPickerModal from './SalaryCompositionSystemPickerModal.vue';
 // Import cho Prism Editor
 import { highlight } from 'prismjs/components/prism-core'
 import Prism from '../../utils/prismExcel.js'
 import { PrismEditor } from 'vue-prism-editor'
 import 'vue-prism-editor/dist/prismeditor.min.css'
 
-import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
+import { GLOBAL_CONSTANTS } from '@/constants/globalConstants'
 import enumService from '@/services/enumService'
 import organizationService from '@/services/organizationService'
 import salaryCompositionService from '@/services/salaryCompositionService'
 import { t } from '@/utils/resourseReader'
-
-
+import { useGridFormActions } from '@/components/base/composables/useGridFormActions.js';
+import { useGridSelection } from '@/components/base/composables/useGridSelection.js';
+const {
+  isShowingForm,
+  formMode,
+  editingItem,
+  handleCreate,
+  handleEdit,
+  handleClone,
+  handleCloseForm
+} = useGridFormActions();
+const {
+  selectedRows,
+  selectedCount,
+  setSelectedRows,
+  clearSelection
+} = useGridSelection();
 // Hàm highlight syntax cho Prism
 const highlighter = (code) => {
   if (!code) return '';
   return highlight(code, Prism.languages.excel, 'excel'); 
+};
+const gridRef = ref(null);
+/*
+clearSelection() trong composable chỉ làm selectedRows = []
+State của checkbox thật trong DataGrid
+*/ 
+const handleClearSelection = () => {
+  clearSelection();              // xóa state ngoài toolbar
+  gridRef.value?.clearSelection(); // bỏ tick thật trong grid
 };
 const { showSuccess, showError } = useToast();
 // State modal xóa
 const isShowDeleteConfirmModal = ref(false);
 const salaryCompositionToDelete = ref(null);
 const isDeleting = ref(false);
+// State modal chuyển trạng thái
+const isShowStatusConfirmModal = ref(false);
+const salaryCompositionToToggle = ref(null);
+const isUpdatingStatus = ref(false);
+const isTracking = (status) => status === 1 || status === true;
 
+const nextStatus = computed(() => {
+  // Computed đã theo dõi biến reactive salaryCompositionToToggle
+  if (!salaryCompositionToToggle.value) return 1;
+  return isTracking(salaryCompositionToToggle.value.status) ? 0 : 1;
+});
+
+const nextStatusText = computed(() =>
+  nextStatus.value === 1 ? 'đang theo dõi' : 'ngừng theo dõi'
+);
+const statusConfirmMessage = computed(() => {
+  // Computed đã theo dõi biến reactive salaryCompositionToToggle
+  const name = salaryCompositionToToggle.value?.compositionName || '';
+
+  return GLOBAL_CONSTANTS.STATUS_CHANGE_CONFIRM_MESSAGE(
+    name,
+    nextStatusText.value
+  );
+});
+// Hàm mở modal
+const handleToggleStatus = (row) => {
+  salaryCompositionToToggle.value = row;
+  isShowStatusConfirmModal.value = true;
+};
+// Hàm build payload
+const buildToggleStatusPayload = (row, status) => ({
+  id: row.id || row.salaryCompositionId,
+  organizationId: row.organizationId,
+  systemCompositionId: row.systemCompositionId,
+  compositionCode: row.compositionCode,
+  compositionName: row.compositionName,
+  compositionType: row.compositionType,
+  property: row.property,
+  taxableType: row.taxableType,
+  taxDeductionType: row.taxDeductionType,
+  norm: row.norm,
+  valueType: row.valueType,
+  valueExpression: row.valueExpression,
+  description: row.description,
+  showOnPayslip: row.showOnPayslip,
+  creationSource: row.creationSource,
+  status: status === 1
+});
+// Hàm confirm update status
+const handleConfirmToggleStatus = async () => {
+  if (isUpdatingStatus.value || !salaryCompositionToToggle.value) return;
+
+  try {
+    isUpdatingStatus.value = true;
+
+    const payload = buildToggleStatusPayload(
+      salaryCompositionToToggle.value,
+      nextStatus.value
+    );
+
+    await salaryCompositionService.update(payload);
+
+    showSuccess(t('message.activities.updateSuccess'));
+
+    isShowStatusConfirmModal.value = false;
+    salaryCompositionToToggle.value = null;
+
+    await fetchData();
+  } catch (error) {
+    showError(error?.message || t('message.activities.updateError'));
+  } finally {
+    isUpdatingStatus.value = false;
+  }
+};
 const router = useRouter();
 // -- Toolbar states --
 const currentStatus = ref(99);
@@ -155,8 +312,14 @@ const fetchStatusOptions = async () => {
     console.error("Lỗi khi lấy dữ liệu FollowStatus:", error);
   }
 };
+
 // Bấm icon trash mở modal
+const isShowSystemDeleteWarningModal = ref(false);
 const handleDelete = (row) => {
+  if (row.systemCompositionId) {
+    isShowSystemDeleteWarningModal.value = true;
+    return;
+  }
   salaryCompositionToDelete.value = row;
   isShowDeleteConfirmModal.value = true;
 };
@@ -190,8 +353,7 @@ const handleConfirmDelete = async () => {
 
     await fetchData();
   } catch (error) {
-    console.error('Lỗi khi xóa thành phần lương:', error);
-    showError(t('message.activities.deleteError'));
+    showError(error?.message || t('message.activities.deleteError'));
   } finally {
     isDeleting.value = false;
   }
@@ -218,13 +380,6 @@ const handleFormSaved = async (mode) => {
   }
   // Sau khi thêm/sửa thành công thì đóng form
   handleCloseForm();
-};
-
-const handleCloseForm = () => {
-  // Đóng form và reset trạng thái về thêm mới
-  isShowingForm.value = false;
-  formMode.value = 'create';
-  editingItem.value = null;
 };
 
 // -- Table config --
@@ -303,25 +458,19 @@ const {
 const handleSearch = fetchSearchSuggestions
 const handleSelectSearchItem = selectSearchItem
 
-// State mode hiện tại của form
-const formMode = ref('create');
-// Dữ liệu dòng đang sửa, truyền xuống form để bind
-const editingItem = ref(null);
 const actionButtons = [
   {
-    hint: 'Ngừng theo dõi',
-    icon: 'icon_minus_yellow',
+    hint: (row) => isTracking(row.status) ? 'Ngừng theo dõi' : 'Theo dõi',
+    icon: (row) => isTracking(row.status) ? 'icon_minus_yellow' : 'icon_check_green',
     onClick: (row) => {
-      alert('Minus ' + row.compositionName)
+      handleToggleStatus(row);
     }
   },
   {
     hint: 'Nhân bản',
     icon: 'icon_copy_primary',
     onClick: (row) => {
-      editingItem.value = row;
-      formMode.value = 'clone';
-      isShowingForm.value = true;
+      handleClone(row);
     }
   },
   {
@@ -339,8 +488,7 @@ const actionButtons = [
     }
   }
 ];
-// State trạng thái form
-const isShowingForm = ref(false);
+
 
 // Computed tính toán để chỉ lấy id các đơn vị cấp cao nhất
 const highestSelectedIds = computed(() => {
@@ -356,6 +504,18 @@ const highestSelectedIds = computed(() => {
     return org && !selectedSet.has(org.parentId)
   })
 })
+// Mở và xử lí form chọn từ danh mục của hệ thống
+  const isShowAddMenu = ref(false);
+  const isShowSystemPickerModal = ref(false);
+
+  const toggleAddMenu = () => {
+    isShowAddMenu.value = !isShowAddMenu.value;
+  };
+
+  const openSystemPicker = () => {
+    isShowAddMenu.value = false;
+    isShowSystemPickerModal.value = true;
+  };
 // Watch để theo dõi đơn vị để build filter cho một list param cùng property
 watch(highestSelectedIds, async (newVals) => {
   await setMultiValueFilter({
@@ -380,28 +540,8 @@ onMounted(() => {
 });
 
 
-// Xử lý khi click vào phần chính của button (bên trái mũi tên)
-const handleMainClick = () => {
-  // Mở form ở chế độ thêm mới
-  formMode.value = 'create';
-  editingItem.value = null;
-  isShowingForm.value = true;
-};
-// Xử lí khi click vào nút thêm
-const handleEdit = (row) => {
-  // Lưu row đang sửa để form bind dữ liệu
-  editingItem.value = row;
 
-  // Đổi form sang chế độ sửa
-  formMode.value = 'edit';
 
-  // Hiển thị form
-  isShowingForm.value = true;
-};
-// Xử lý khi click vào phần mũi tên (dropdown)
-const handleDropdownClick = () => {
-  console.log('Dropdown clicked: Mở menu hành động');
-};
 
 // Xử lí chuyển sang danh mục hệ thống
 const goToSystemList = () => {
@@ -444,10 +584,15 @@ const goToSystemList = () => {
   font-family: Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace !important;
   outline: none !important;
 }
-
+.bulk_actions{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
 </style>
 <style lang="scss" scoped>
 /* CSS hiện tại của màn list */
+
 </style>
 
 <style lang="scss">
@@ -459,4 +604,33 @@ const goToSystemList = () => {
 .delete-confirm-button.base_button--secondary:hover {
   background-color: #D93B3B !important;
 }
+.add_button_wrapper {
+  position: relative;
+}
+
+.add_menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  height: 53px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+  box-sizing: border-box;
+  z-index: 20;
+}
+
+.add_menu_item {
+  padding: 10px 16px;
+  cursor: pointer;
+
+  &:hover {
+    background: #eafbf2;
+  }
+}
+
 </style>
