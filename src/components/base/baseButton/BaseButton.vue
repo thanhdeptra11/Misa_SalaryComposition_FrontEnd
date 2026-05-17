@@ -201,6 +201,7 @@ const rootTag = computed(() =>
   }
 }
 
+
 // --- icon-only: bare icon, no chrome (grid row actions).
 // Kept unstyled to match the original OnlyIconButton behavior — the
 // consumer passes the icon class (e.g. icon_edit_table) via the outer

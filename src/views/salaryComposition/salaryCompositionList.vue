@@ -30,6 +30,7 @@
         @clearSelection="handleClearSelection"
         @search="handleSearch"
         @selectSearchItem="handleSelectSearchItem"
+        @openColumnSetting="isShowColumnSetting = true"
         v-model:selectedItem="currentStatus"
         v-model:unitFilterValue="currentUnits"
         :dropdownOptions="statusOptions"
@@ -65,7 +66,7 @@
         </template>
       </GridDataToolbar>
       
-          <GridData :columns="tableColumns" 
+          <GridData :columns="visibleColumns" 
           :data="tableData" 
           :actionButtons="actionButtons"
           @selectionChanged="setSelectedRows"
@@ -152,6 +153,12 @@
   v-model="isShowSystemPickerModal"
   @saved="fetchData"
 />
+<ColumnSettingModal
+  v-model="isShowColumnSetting"
+  :columns="tableColumns"
+  @save="handleSaveColumnConfig"
+  @reset="handleResetColumnConfig"
+/>
 </template>
 
 <script setup>
@@ -168,6 +175,7 @@ import GridDataFooter from '@/components/base/baseGridData/GridDataFooter.vue'
 import SalaryCompositionForm from './salaryCompositionForm.vue'
 import BaseConfirmModal from '@/components/base/baseModal/BaseConfirmModal.vue'
 import SalaryCompositionSystemPickerModal from './SalaryCompositionSystemPickerModal.vue';
+import ColumnSettingModal from '@/components/base/baseGridData/ColumnSettingModal.vue'
 // Import cho Prism Editor
 import { highlight } from 'prismjs/components/prism-core'
 import Prism from '../../utils/prismExcel.js'
@@ -181,6 +189,7 @@ import salaryCompositionService from '@/services/salaryCompositionService'
 import { t } from '@/utils/resourseReader'
 import { useGridFormActions } from '@/components/base/composables/useGridFormActions.js';
 import { useGridSelection } from '@/components/base/composables/useGridSelection.js';
+import { useGridColumns } from '@/components/base/composables/useGridColumn.js'
 const {
   isShowingForm,
   formMode,
@@ -196,6 +205,97 @@ const {
   setSelectedRows,
   clearSelection
 } = useGridSelection();
+
+// -- Table config --
+const defaultTableColumns = [
+  {
+    field: 'compositionName',
+    title: 'Tên thành phần',
+    width: 250,
+    fixed: true,
+    hideable: false
+  },
+  {
+    field: 'compositionCode',
+    title: 'Mã thành phần',
+    width: 200
+  },
+  {
+    field: 'organizationName',
+    title: 'Đơn vị áp dụng',
+    width: 250
+  },
+  {
+    field: 'compositionTypeDesc',
+    title: 'Loại thành phần',
+    width: 200
+  },
+  {
+    field: 'propertyDesc',
+    title: 'Tính chất',
+    width: 150
+  },
+  {
+    field: 'taxableTypeDesc',
+    title: 'Chịu thuế',
+    width: 150
+  },
+  {
+    field: 'taxDeductionType',
+    title: 'Giảm trừ khi tính thuế',
+    width: 200
+  },
+  {
+    field: 'norm',
+    title: 'Định mức',
+    width: 150
+  },
+  {
+    field: 'valueTypeDesc',
+    title: 'Kiểu giá trị',
+    width: 150
+  },
+  {
+    field: 'valueExpression',
+    title: 'Giá trị',
+    width: 250,
+    cellTemplate: 'valueExpressionTemplate'
+  },
+  {
+    field: 'description',
+    title: 'Mô tả',
+    width: 250
+  },
+  {
+    field: 'showOnPayslipDesc',
+    title: 'Hiển thị trên phiếu lương',
+    width: 200
+  },
+  {
+    field: 'creationSource',
+    title: 'Nguồn tạo',
+    width: 150
+  },
+  {
+    field: 'statusDesc',
+    title: 'Trạng thái',
+    width: 150,
+    cellTemplate: 'statusTemplate'
+  }
+]
+
+const {
+  columns: tableColumns,
+  visibleColumns,
+  loadColumnConfig,
+  saveColumns,
+  resetColumns
+} = useGridColumns(defaultTableColumns, {
+  userId: GLOBAL_CONSTANTS.DEFAULT_USER_CONFIG_ID,
+  gridId: GLOBAL_CONSTANTS.DEFAULT_DATA_TABLE_ID
+})
+
+const isShowColumnSetting = ref(false)
 // Hàm highlight syntax cho Prism
 const highlighter = (code) => {
   if (!code) return '';
@@ -382,23 +482,6 @@ const handleFormSaved = async (mode) => {
   handleCloseForm();
 };
 
-// -- Table config --
-const tableColumns = ref([
-  { field: 'compositionCode', title: 'Mã thành phần', width: 200, fixed: true },
-  { field: 'organizationName', title: 'Đơn vị áp dụng', width: 250 },
-  { field: 'compositionTypeDesc', title: 'Loại thành phần', width: 200 },
-  { field: 'propertyDesc', title: 'Tính chất', width: 150 },
-  { field: 'taxableTypeDesc', title: 'Chịu thuế', width: 150 },
-  { field: 'taxDeductionType', title: 'Giảm trừ khi tính thuế', width: 200 },
-  { field: 'norm', title: 'Định mức', width: 150 },
-  { field: 'valueTypeDesc', title: 'Kiểu giá trị', width: 150 },
-  { field: 'valueExpression', title: 'Giá trị', width: 250, cellTemplate: 'valueExpressionTemplate' },
-  { field: 'description', title: 'Mô tả', width: 250 },
-  { field: 'showOnPayslipDesc', title: 'Hiển thị trên phiếu lương', width: 200 },
-  { field: 'creationSource', title: 'Nguồn tạo', width: 150 },
-  { field: 'statusDesc', title: 'Trạng thái', width: 150, cellTemplate: 'statusTemplate' },
-  { field: 'compositionName', title: 'Tên thành phần', width: 250 }
-]);
 const {
   tableData,
   totalRecords,
@@ -516,6 +599,16 @@ const highestSelectedIds = computed(() => {
     isShowAddMenu.value = false;
     isShowSystemPickerModal.value = true;
   };
+  // Xử lí hiển thị modal khi click nút setting cột
+  const handleSaveColumnConfig = async (draftColumns) => {
+  await saveColumns(draftColumns)
+  isShowColumnSetting.value = false
+}
+
+const handleResetColumnConfig = async () => {
+  await resetColumns()
+  isShowColumnSetting.value = false
+}
 // Watch để theo dõi đơn vị để build filter cho một list param cùng property
 watch(highestSelectedIds, async (newVals) => {
   await setMultiValueFilter({
@@ -537,6 +630,7 @@ onMounted(() => {
   fetchStatusOptions();
   fetchUnitOptions();
   fetchData();
+  loadColumnConfig()
 });
 
 

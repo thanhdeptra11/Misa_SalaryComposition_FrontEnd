@@ -246,10 +246,10 @@ watch(
     }
   }
 );
-
 onMounted(() => {
   fetchCompositionTypeOptions();
 });
+
 </script>
 
 <style scoped lang="scss">

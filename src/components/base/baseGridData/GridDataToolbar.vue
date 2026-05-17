@@ -44,8 +44,17 @@
           :dropDownBoxWidth= 370
         />
         
-        <BaseButton v-if="showFilterBtn" variant="icon-only" class="icon icon_filter" />
-        <BaseButton v-if="showSettingBtn" variant="icon-only" class="icon icon_setting_column" />
+        <BaseButton id="btnFilter" v-if="showFilterBtn" variant="icon-only" class="icon icon_filter" />
+        <BaseButton id="btnSettingColumn" v-if="showSettingBtn" variant="icon-only" class="icon icon_setting_column"
+         @click="$emit('openColumnSetting')" />
+        <BaseToolTip
+        target="#btnFilter"
+        content="Bộ lọc"
+        />
+        <BaseToolTip
+        target="#btnSettingColumn"
+        content="Thiết lập"
+        />
       </slot>
     </div>
   </div>
@@ -57,6 +66,7 @@ import BaseHeaderSearch from '@/components/base/BaseHeaderSearch.vue'
 import BaseDropdown from '@/components/base/baseInput/BaseDropdown.vue'
 import BaseHierachyTree from '@/components/base/baseInput/BaseHierachyTree.vue'
 import BaseButton from '@/components/base/baseButton/BaseButton.vue'
+import BaseToolTip from '@/components/base/BaseToolTip.vue'
 
 const props = defineProps({
   selectedItem: { type: [String, Number], default: '' },
@@ -101,7 +111,8 @@ const emit = defineEmits([
   'selectSearchItem', 
   'update:selectedItem', 
   'update:unitFilterValue',
-  'clearSelection'])
+  'clearSelection',
+'openColumnSetting'])
 const selectedItem = ref(props.selectedItem || (props.dropdownOptions && props.dropdownOptions[0]?.value) || '')
 const internalUnit = ref(Array.isArray(props.unitFilterValue) ? props.unitFilterValue : [])
 

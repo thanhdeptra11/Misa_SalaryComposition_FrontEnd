@@ -19,7 +19,7 @@
       <DxSelection mode="multiple" show-check-boxes-mode="always" />
       <DxScrolling show-scrollbar="always"
                    :scroll-by-thumb="true"
-                   :use-native="false" />
+                   :use-native="true" />
       
       <!-- Render dynamic columns -->
       <DxColumn
@@ -29,8 +29,8 @@
         :caption="col.title"
         :width="col.width"
         :min-width="col.minWidth"
-        :fixed="col.fixed"
-        :fixed-position="col.fixedPosition"
+        :fixed="col.pinned ?? col.fixed"
+        :fixed-position="col.pinPosition ?? col.fixedPosition"
         :cell-template="col.cellTemplate"
         :alignment="col.alignment || 'left'"
         :customize-text="customizeEmptyCellText"
@@ -106,9 +106,7 @@ const clearSelection = () => {
   gridRef.value?.instance?.clearSelection();
 };
 
-defineExpose({
-  clearSelection
-});
+
 const columnsWithTemplates = computed(() => {
   return props.columns.filter(col => col.cellTemplate);
 });
@@ -128,6 +126,9 @@ const customizeEmptyCellText = (cellInfo) => {
   // Các giá trị hợp lệ như 0, false vẫn được giữ nguyên để tránh sai dữ liệu
   return cellInfo.valueText;
 };
+defineExpose({
+  clearSelection
+});
 
 </script>
 
@@ -137,6 +138,8 @@ const customizeEmptyCellText = (cellInfo) => {
   width: 100%;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
   border-top: 1px solid #e0e0e0;
 }
 .custom-grid{
