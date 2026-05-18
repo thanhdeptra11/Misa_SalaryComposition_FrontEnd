@@ -8,4 +8,5 @@ export const GLOBAL_CONSTANTS = {
     `Bạn có chắc chắn muốn chuyển trạng thái thành phần lương ${name} sang ${nextStatusText} không?`,
   DEFAULT_USER_CONFIG_ID: '795359c2-19be-486e-926d-162a998f3ebe',
   DEFAULT_DATA_TABLE_ID: 'CompositionSalaryList9087',
+  DEFAULT_DATA_TABLE_ID_COMPOSITION_SALARY_SYSTEM: 'CompositionSalarySystemList9087',
 };

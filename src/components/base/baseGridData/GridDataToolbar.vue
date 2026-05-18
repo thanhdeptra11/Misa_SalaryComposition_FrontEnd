@@ -47,17 +47,17 @@
         <BaseButton id="btnFilter" v-if="showFilterBtn" variant="icon-only" class="icon icon_filter" />
         <BaseButton id="btnSettingColumn" v-if="showSettingBtn" variant="icon-only" class="icon icon_setting_column"
          @click="$emit('openColumnSetting')" />
-        <BaseToolTip
-        target="#btnFilter"
-        content="Bộ lọc"
-        />
+      </slot>
+    </div>
+  </div>
+      <BaseToolTip
+            target="#btnFilter"
+            content="Bộ lọc"
+            />
         <BaseToolTip
         target="#btnSettingColumn"
         content="Thiết lập"
         />
-      </slot>
-    </div>
-  </div>
 </template>
 
 <script setup>

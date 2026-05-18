@@ -32,6 +32,7 @@
           :show-status-filter="true"
           @search="handleSearch"
           @selectSearchItem="handleSelectSearchItem"
+          @openColumnSetting="isShowColumnSetting = true"
         >
           <template #search-item="{ item }">
             <span>{{ item.compositionCode }} - {{ item.compositionName }}</span>
@@ -50,7 +51,7 @@
         </GridDataToolbar>
 
         <GridData
-          :columns="tableColumns"
+          :columns="visibleColumns"
           :data="tableData"
           :actionButtons="actionButtons"
           @selectionChanged="setSelectedRows"
@@ -90,6 +91,13 @@
     width="500px"
     @confirm="handleConfirmApply"
   />
+  <ColumnSettingModal
+  v-model="isShowColumnSetting"
+  parent-id="btnSettingColumn"
+  :columns="tableColumns"
+  @save="handleSaveColumnConfig"
+  @reset="handleResetColumnConfig"
+/>
 </template>
 
 <script setup>
@@ -104,9 +112,12 @@ import GridData from '@/components/base/baseGridData/GridData.vue';
 import BaseConfirmModal from '@/components/base/baseModal/BaseConfirmModal.vue';
 import GridDataToolbar from '@/components/base/baseGridData/GridDataToolbar.vue';
 import GridDataFooter from '@/components/base/baseGridData/GridDataFooter.vue';
+import ColumnSettingModal from '@/components/base/baseGridData/ColumnSettingModal.vue'
 import salaryCompositionSystemService from '@/services/salaryCompositionSystemService';
 import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
 import { useGridSelection } from '@/components/base/composables/useGridSelection';
+import { useGridFormActions } from '@/components/base/composables/useGridFormActions.js';
+import { useGridColumns } from '@/components/base/composables/useGridColumn.js';
 // Import cho Prism Editor
 import { highlight } from 'prismjs/components/prism-core'
 import Prism from '../../utils/prismExcel.js'
@@ -177,14 +188,36 @@ const {
 const gridRef = ref(null);
 const handleSearch = fetchSearchSuggestions
 const handleSelectSearchItem = selectSearchItem
-const tableColumns = ref([
-  { field: 'compositionCode', title: 'Mã thành phần', minWidth: 260, fixed: true },
-  { field: 'compositionName', title: 'Tên thành phần', minWidth: 320 },
+
+const {
+  isShowingForm,
+  formMode,
+  editingItem,
+  handleCreate,
+  handleEdit,
+  handleClone,
+  handleCloseForm
+} = useGridFormActions();
+
+const defaultTableColumns = [
+  { field: 'compositionCode', title: 'Mã thành phần', width: 260, fixed: true },
+  { field: 'compositionName', title: 'Tên thành phần', width: 320 },
   { field: 'compositionTypeDesc', title: 'Loại thành phần', width: 200 },
   { field: 'propertyDesc', title: 'Tính chất', width: 160 },
   { field: 'valueTypeDesc', title: 'Kiểu giá trị', width: 160 },
   { field: 'valueExpression', title: 'Giá trị', width: 260, cellTemplate: 'valueExpressionTemplate' }
-]);
+];
+
+const {
+  columns: tableColumns,
+  visibleColumns,
+  loadColumnConfig,
+  saveColumns,
+  resetColumns
+} = useGridColumns(defaultTableColumns, {
+  userId: GLOBAL_CONSTANTS.DEFAULT_USER_CONFIG_ID,
+  gridId: GLOBAL_CONSTANTS.DEFAULT_DATA_TABLE_ID_COMPOSITION_SALARY_SYSTEM
+});
 const actionButtons = [
   {
     hint: 'Đưa vào danh sách sử dụng',
@@ -283,9 +316,22 @@ const handleConfirmApply = async () => {
     isApplying.value = false;
   }
 };
+const isShowColumnSetting = ref(false);
+
+const handleSaveColumnConfig = async (draftColumns) => {
+  await saveColumns(draftColumns);
+  isShowColumnSetting.value = false;
+};
+
+const handleResetColumnConfig = async () => {
+  await resetColumns();
+  isShowColumnSetting.value = false;
+};
+
 onMounted(() => {
   fetchData();
   fetchCompositionTypeOptions();
+  loadColumnConfig();
 });
 </script>
 

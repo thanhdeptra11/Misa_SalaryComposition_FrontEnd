@@ -8,6 +8,7 @@ import App from '@/App.vue'
 import router from './router'
 // Import css
 import './assets/PrismExcelTheme.css'
+import BaseSearchBox from './components/base/BaseSearchBox.vue'
 import BaseFormLayout from './components/base/BaseFormLayout.vue'
 import BaseButton from '@/components/base/baseButton/BaseButton.vue'
 import BaseSelectBox from '@/components/base/baseInput/BaseSelectBox.vue'
@@ -39,6 +40,7 @@ app.component('BaseToolTip', BaseToolTip)
 app.component('BaseRadio', BaseRadio)
 app.component('BaseTextUnderline', BaseTextUnderline)
 app.component('BaseFormLayout', BaseFormLayout)
+app.component('BaseSearchBox', BaseSearchBox)
 app.use(createPinia())
 app.use(router)
 

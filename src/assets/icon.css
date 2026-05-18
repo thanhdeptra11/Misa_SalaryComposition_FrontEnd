@@ -571,3 +571,10 @@
   -webkit-mask-position: -220px 0;
   background-color: #34b057 !important;
 }
+.mi_drag{
+   width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: 0 -100px;
+  background-color: #afb3c1;
+}

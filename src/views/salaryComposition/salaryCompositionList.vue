@@ -6,6 +6,7 @@
         <BaseButton @click="goToSystemList" variant="primary" iconClass="icon_scale" buttonText="Danh mục của hệ thống" />
         <div class="add_button_wrapper">
           <BaseButton 
+            id="salary-composition-mixed-button"
             variant="mixed" 
             iconClass="icon_add" 
             buttonText="Thêm mới" 
@@ -49,18 +50,21 @@
                 variant="outline-color"
                 iconClass="icon_minus_yellow"
                 buttonText="Ngừng theo dõi"
-                buttonColor="#f90" />
+                buttonColor="#f90"
+                @click="openBulkStatusConfirm(0)" />
                 <BaseButton 
                 variant="outline-color"
                 iconClass="icon_check_green"
                 buttonText="Đang theo dõi"
                 buttonColor="#34b057"
+                @click="openBulkStatusConfirm(1)"
                 />
                 <BaseButton 
                 variant="outline-color"
                 iconClass="icon_trash_red"
                 buttonText="Xóa"
                 buttonColor="#ff6161"
+                @click="openBulkDeleteConfirm"
                 />
           </div>
         </template>
@@ -149,12 +153,35 @@
   :showSecondary="false"
   width="500px"
 />
+<BaseConfirmModal
+  v-model="isShowBulkStatusConfirmModal"
+  title="Chuyển trạng thái"
+  :message="bulkStatusConfirmMessage"
+  cancelText="Hủy bỏ"
+  confirmText="Đồng ý"
+  :showSecondary="false"
+  width="500px"
+  @confirm="handleConfirmBulkStatus"
+/>
+<BaseConfirmModal
+  v-model="isShowBulkDeleteConfirmModal"
+  title="Xóa thành phần lương"
+  :message="bulkDeleteConfirmMessage"
+  cancelText="Hủy"
+  confirmText="Xóa"
+  :showCancel="bulkDeletableRows.length > 0"
+  :showSecondary="false"
+  confirmButtonClass="delete-confirm-button"
+  width="500px"
+  @confirm="handleConfirmBulkDelete"
+/>
   <SalaryCompositionSystemPickerModal
   v-model="isShowSystemPickerModal"
   @saved="fetchData"
 />
 <ColumnSettingModal
-  v-model="isShowColumnSetting"
+v-model="isShowColumnSetting"
+  parent-id="btnSettingColumn"
   :columns="tableColumns"
   @save="handleSaveColumnConfig"
   @reset="handleResetColumnConfig"
@@ -604,7 +631,135 @@ const highestSelectedIds = computed(() => {
   await saveColumns(draftColumns)
   isShowColumnSetting.value = false
 }
+/*==================Xử lí các bulk actions============================
+*/ 
+/* Xử lí bulk theo dõi*/
+const isShowBulkStatusConfirmModal = ref(false)
+const bulkTargetStatus = ref(null)
+const isUpdatingBulkStatus = ref(false)
 
+const bulkStatusText = computed(() =>
+  bulkTargetStatus.value === 1 ? 'đang theo dõi' : 'ngừng theo dõi'
+)
+// Lấy giá trị text
+const bulkStatusConfirmMessage = computed(() =>
+  `Bạn có chắc chắn muốn chuyển trạng thái thành phần lương đã chọn sang ${bulkStatusText.value} không?`
+)
+// Mở modal xác nhận bulk theo dõi
+const openBulkStatusConfirm = (status) => {
+  if (!selectedRows.value.length) return
+
+  bulkTargetStatus.value = status
+  isShowBulkStatusConfirmModal.value = true
+}
+// Build payload cho bulk theo dõi
+const buildBulkStatusPayload = (status) =>
+  selectedRows.value.map((row) => ({
+    ...buildToggleStatusPayload(row, status),
+    state: 2
+  }))
+
+// Xử lí confirm bulk theo dõi
+const handleConfirmBulkStatus = async () => {
+  if (
+    isUpdatingBulkStatus.value ||
+    bulkTargetStatus.value === null ||
+    !selectedRows.value.length
+  ) {
+    return
+  }
+
+  try {
+    isUpdatingBulkStatus.value = true
+
+    await salaryCompositionService.saveData(
+      buildBulkStatusPayload(bulkTargetStatus.value)
+    )
+
+    showSuccess(t('message.activities.updateSuccess'))
+
+    isShowBulkStatusConfirmModal.value = false
+    bulkTargetStatus.value = null
+
+    handleClearSelection()
+    await fetchData()
+  } catch (error) {
+    showError(error?.message || t('message.activities.updateError'))
+  } finally {
+    isUpdatingBulkStatus.value = false
+  }
+}
+/* =========================Xử lí bulk theo dõi==================*/
+/* Xử lí bulk xóa*/
+const isShowBulkDeleteConfirmModal = ref(false)
+const bulkSystemRows = ref([])
+const bulkDeletableRows = ref([])
+const isBulkDeleting = ref(false)
+// Hàm xử lí content của modal
+const bulkDeleteConfirmMessage = computed(() => {
+  const systemNames = bulkSystemRows.value
+    .map(row => row.compositionName)
+    .filter(Boolean)
+    .join(', ')
+
+  if (bulkSystemRows.value.length && bulkDeletableRows.value.length) {
+    return `${systemNames} là giá trị mặc định của hệ thống nên không thể xóa. Bạn có muốn xóa các bản ghi còn lại không?`
+  }
+
+  if (bulkSystemRows.value.length && !bulkDeletableRows.value.length) {
+    return `${systemNames} là giá trị mặc định của hệ thống nên không thể xóa.`
+  }
+
+  return `Bạn có chắc chắn muốn xóa ${bulkDeletableRows.value.length} thành phần lương đã chọn không?`
+})
+// Mở modal xác nhận bulk xóa
+const openBulkDeleteConfirm = () => {
+  if (!selectedRows.value.length) return
+
+  bulkSystemRows.value = selectedRows.value.filter(
+    row => row.systemCompositionId
+  )
+
+  bulkDeletableRows.value = selectedRows.value.filter(
+    row => !row.systemCompositionId
+  )
+
+  isShowBulkDeleteConfirmModal.value = true
+}
+// Hàm confirm bulk xóa
+const handleConfirmBulkDelete = async () => {
+  if (isBulkDeleting.value || !bulkDeletableRows.value.length) return
+
+  const deleteIds = bulkDeletableRows.value
+    .map(row => row.id || row.salaryCompositionId)
+    .filter(Boolean)
+
+  if (!deleteIds.length) return
+
+  try {
+    isBulkDeleting.value = true
+
+    await salaryCompositionService.deleteMultiple(deleteIds)
+
+    showSuccess(t('message.activities.deleteSuccess'))
+
+    isShowBulkDeleteConfirmModal.value = false
+    bulkSystemRows.value = []
+    bulkDeletableRows.value = []
+
+    handleClearSelection()
+    await fetchData()
+  } catch (error) {
+    showError(error?.message || t('message.activities.deleteError'))
+  } finally {
+    isBulkDeleting.value = false
+  }
+}
+/*===================Xử lí bulk xóa==============*/
+
+
+/*==================Xử lí các bulk actions=====================================================
+*/ 
 const handleResetColumnConfig = async () => {
   await resetColumns()
   isShowColumnSetting.value = false
