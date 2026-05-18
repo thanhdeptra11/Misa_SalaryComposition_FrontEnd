@@ -8,12 +8,15 @@
         :style="popupStyle"
         @mousedown.stop
   >
-    <div class="base_popup_content__header">
+    <div v-if="showHeader" class="base_popup_content__header">
       <span class="base_popup_content__title">{{ title }}</span>
     </div>
 
-    <div class="base_popup_content__body">
-      <slot />
+    <div
+      class="base_popup_content__body"
+      :style="{ padding: bodyPadding }"
+    >
+    <slot />
     </div>
 
     <div v-if="$slots.footer" class="base_popup_content__footer">
@@ -51,7 +54,15 @@ const props = defineProps({
   closeOnOutsideClick: {
     type: Boolean,
     default: true
-  }
+  },
+  showHeader: {
+  type: Boolean,
+  default: true
+},
+bodyPadding: {
+  type: String,
+  default: '24px 0 24px 24px'
+}
 })
 
 const emit = defineEmits(['update:modelValue', 'close'])
@@ -217,8 +228,6 @@ onBeforeUnmount(() => {
   flex: 1;
   overflow-y: auto;
   scrollbar-gutter: stable;
-  padding: 24px;
-  padding-right: 0 !important;
 }
 
 .base_popup_content__footer {

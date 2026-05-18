@@ -52,8 +52,8 @@
           </ul>
         </Transition>
       </div>
-      <div v-if="errorMessage" class="base-combobox-error">
-          {{ errorMessage }}
+      <div class="base-combobox-error" :class="{ 'is-visible': errorMessage }">
+        {{ errorMessage }}
       </div>
     </div>
   </div>
@@ -390,9 +390,15 @@ onUnmounted(() => {
   border-color: #ff6161;
 }
 .base-combobox-error {
-  margin-top: 8px;
+  min-height: 18px;
+  margin-top: 4px;
   font-size: 12px;
   color: #ff6161;
+  visibility: hidden;
+
+  &.is-visible {
+    visibility: visible;
+  }
 }
 
 /* Animations */

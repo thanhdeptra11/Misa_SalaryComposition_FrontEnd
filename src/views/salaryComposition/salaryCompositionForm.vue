@@ -1,4 +1,6 @@
 <template>
+
+  
 <!-- Gọi Base layout lắng nghe sự kiện back -->
  <BaseFormLayout :pageTitle="isEditMode ? (props.editingItem?.compositionName || 'Sửa thành phần') : 'Thêm thành phần'"
   @back="handleBack">
@@ -167,13 +169,100 @@
                   />
                 </div>
                 <!-- Nội dung hiển thị khi chọn -->
-                 <div class="value_conditional_content" v-if="ValueoptionModel === 'formula'">
-                    <BaseTextArea
-                     v-model="customFormula"
-                     input-width="674px"
-                    
-                    />
-                 </div>
+                <div class="value_conditional_content" v-if="ValueoptionModel === 'formula'">
+                      <BaseTextArea
+                        input-id="salary-formula-textarea"
+                        v-model="customFormula"
+                        inputWidth="676px"
+                        @focus="handleFormulaFocus"
+                        @input="handleFormulaInput"
+                      />
+
+                      <BasePopupContent
+                        v-model="isShowFormulaSuggestionPopup"
+                        parent-id="salary-formula-textarea"
+                        width="674px"
+                        :show-header="false"
+                        body-padding="0"
+                      >
+                        <BaseTabContent
+                          v-model="activeSuggestionTab"
+                          :tabs="suggestionTabs"
+                          body-max-height="316px"
+                        >
+                          <template #formula>
+                            <div class="formula_suggestion_list">
+                              <button
+                                v-for="item in filteredFormulaSuggestions"
+                                :key="item.key"
+                                type="button"
+                                class="formula_suggestion_item"
+                                @mousedown.prevent="handleSelectFormulaSuggestion(item)"
+                              >
+                                <div class="mi_formula suggestion_icon"></div>
+
+                                <div class="suggestion_content">
+                                  <div class="suggestion_title">
+                                    {{ item.name }}
+                                    <span class="suggestion_code">
+                                      ({{ item.syntax }})
+                                    </span>
+                                  </div>
+
+                                  <div class="suggestion_description">
+                                    {{ item.description }}
+                                  </div>
+                                </div>
+                              </button>
+
+                              <div
+                                v-if="!filteredFormulaSuggestions.length"
+                                class="suggestion_empty"
+                              >
+                                Không tìm thấy công thức phù hợp
+                              </div>
+                            </div>
+                          </template>
+
+                          <template #parameter>
+                            <div class="formula_suggestion_list">
+                              <button
+                                v-for="item in filteredParameterSuggestions"
+                                :key="item.id"
+                                type="button"
+                                class="formula_suggestion_item"
+                                @mousedown.prevent="handleSelectParameterSuggestion(item)"
+                              >
+                                <div class="mi_database suggestion_icon"></div>
+
+                                <div class="suggestion_content">
+                                  <div class="suggestion_title">
+                                    {{ item.compositionName }}
+                                    <span class="suggestion_code">
+                                      ({{ item.compositionCode }})
+                                    </span>
+                                  </div>
+
+                                  <div
+                                    v-if="item.description"
+                                    class="suggestion_description"
+                                  >
+                                    {{ item.description }}
+                                  </div>
+                                </div>
+                              </button>
+
+                              <div
+                                v-if="!filteredParameterSuggestions.length"
+                                class="suggestion_empty"
+                              >
+                                Không tìm thấy tham số phù hợp
+                              </div>
+                            </div>
+                          </template>
+                        </BaseTabContent>
+                      </BasePopupContent>
+                </div>
                </div>
             </div>
           </div>
@@ -237,6 +326,8 @@ import BaseCheckBox from '@/components/base/baseInput/BaseCheckBox.vue';
 import BaseToolTip from '@/components/base/BaseToolTip.vue';
 import BaseTextUnderline from '@/components/base/baseInput/BaseTextUnderline.vue';
 import BaseConfirmModal from '@/components/base/baseModal/BaseConfirmModal.vue';
+import BasePopupContent from '@/components/base/BasePopupContent.vue'
+import BaseTabContent from '@/components/base/BaseTabContent.vue'
 
 // ========================
 // Services / utils
@@ -244,6 +335,7 @@ import BaseConfirmModal from '@/components/base/baseModal/BaseConfirmModal.vue';
 import organizationService from '@/services/organizationService';
 import enumService from '@/services/enumService';
 import salaryCompositionService from '@/services/salaryCompositionService';
+import { EXCEL_FORMULA_SUGGESTIONS } from '@/constants/excelFormulaSuggestions'
 import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
 import { cleanPayload } from '@/utils/helper';
 import { t } from '@/utils/resourseReader';
@@ -314,10 +406,11 @@ const compositionNorm = ref('');
 const isValueExceedNorm = ref(false);
 const internalValueType = ref(4);
 const ValueoptionModel = ref(null);
-const customFormula = ref('');
 const salaryCompositionDescription = ref('');
 const displayPayroll = ref(null);
 const sourceOfCreation = ref('Tự thêm');
+
+const customFormula = ref('');
 
 // ========================
 // Validate state
@@ -679,6 +772,83 @@ const handleSave = async () => {
     return false;
   }
 };
+// ========================
+// Formula methods
+// ========================
+const isShowFormulaSuggestionPopup = ref(false)
+const activeSuggestionTab = ref('formula')
+const salaryCompositionSuggestions = ref([])
+
+const suggestionTabs = [
+  { key: 'formula', label: 'Công thức' },
+  { key: 'parameter', label: 'Tham số' }
+]
+
+const normalizeSearchText = (value = '') =>
+  String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+//Lọc danh sách công thức
+const filteredFormulaSuggestions = computed(() => {
+  const keyword = normalizeSearchText(customFormula.value)
+
+  if (!keyword) return EXCEL_FORMULA_SUGGESTIONS
+
+  return EXCEL_FORMULA_SUGGESTIONS.filter((item) =>
+    [item.name, item.syntax, item.description].some((field) =>
+      normalizeSearchText(field).includes(keyword)
+    )
+  )
+})
+//Lọc danh sách tham số
+const filteredParameterSuggestions = computed(() => {
+  const keyword = normalizeSearchText(customFormula.value)
+
+  const availableItems = salaryCompositionSuggestions.value.filter(
+    (item) => item.id !== salaryCompositionId.value
+  )
+
+  if (!keyword) return availableItems
+
+  return availableItems.filter((item) =>
+    [
+      item.compositionName,
+      item.compositionCode,
+      item.description
+    ].some((field) =>
+      normalizeSearchText(field).includes(keyword)
+    )
+  )
+})
+//Lấy danh sách tham số
+const fetchSalaryCompositionSuggestions = async () => {
+  try {
+    const data = await salaryCompositionService.getAll()
+    salaryCompositionSuggestions.value = Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách tham số:', error)
+    salaryCompositionSuggestions.value = []
+  }
+}
+//Hiển thị pop up công thức
+const handleFormulaFocus = () => {
+  isShowFormulaSuggestionPopup.value = true
+}
+// Hiển thị pop up công thức khi input
+const handleFormulaInput = () => {
+  isShowFormulaSuggestionPopup.value = true
+}
+// Chọn công thức
+const handleSelectFormulaSuggestion = (item) => {
+  customFormula.value = item.value
+  isShowFormulaSuggestionPopup.value = false
+}
+//Chọn tham số
+const handleSelectParameterSuggestion = (item) => {
+  customFormula.value = item.compositionCode
+  isShowFormulaSuggestionPopup.value = false
+}
 
 // ========================
 // Watchers
@@ -725,6 +895,7 @@ watch(compositionName, (newValue) => {
 onMounted(() => {
   fetchUnitOptions();
   fetchComboboxOptions();
+  fetchSalaryCompositionSuggestions()
 });
 </script>
 
@@ -766,6 +937,9 @@ onMounted(() => {
   align-items: flex-start;
 }
 .value_options_container{
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
   .value_radio_row{
     display: flex;
     margin-bottom: 16px;
@@ -781,5 +955,61 @@ onMounted(() => {
       display: flex;
       gap: 12px;
     }
+.formula_suggestion_list {
+  display: flex;
+  flex-direction: column;
+}
 
+.formula_suggestion_item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 0;
+  border: none;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #ffffff;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #f6fbf7;
+  }
+}
+
+.suggestion_icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.suggestion_content {
+  min-width: 0;
+  flex: 1;
+}
+
+.suggestion_title {
+  color: #212121;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.suggestion_code {
+  color: #4b5563;
+  font-weight: 400;
+}
+
+.suggestion_description {
+  margin-top: 2px;
+  color: #666666;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.suggestion_empty {
+  padding: 16px;
+  color: #666666;
+  font-size: 14px;
+}
 </style>

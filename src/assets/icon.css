@@ -578,3 +578,17 @@
   -webkit-mask-position: 0 -100px;
   background-color: #afb3c1;
 }
+.mi_formula{
+  width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: -264px -120px;
+  background-color: #666;
+}
+.mi_database{
+  width: 20px;
+  height: 20px;
+  -webkit-mask-image: url(https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg);
+  -webkit-mask-position: -288px -122px;;
+  background-color: #666;
+}

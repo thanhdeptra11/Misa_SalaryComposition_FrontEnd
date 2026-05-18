@@ -10,16 +10,22 @@
     </label>
 
     <textarea
+      ref="textareaRef"
+      :id="inputId"
       class="base_text_area__input"
       :placeholder="placeholder"
       :value="modelValue"
       :rows="rows"
       :style="{ width: inputWidth }"
-      @input="emit('update:modelValue', $event.target.value)"
+      @input="handleInput"
+      @focus="emit('focus', $event)"
+      @blur="emit('blur', $event)"
     />
   </div>
 </template>
 <script setup>
+import { ref } from 'vue'
+
 defineProps({
   modelValue: {
     type: String,
@@ -54,10 +60,24 @@ defineProps({
   inputWidth: {
     type: String,
     default: '100%'
+  },
+
+  inputId: {
+    type: String,
+    default: ''
   }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits([
+  'update:modelValue',
+  'input',
+  'focus',
+])
+
+const handleInput = (event) => {
+  emit('update:modelValue', event.target.value)
+  emit('input', event)
+}
 </script>
 <style lang="scss" scoped>
 @use '@/assets/variables.scss' as *;

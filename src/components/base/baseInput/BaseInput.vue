@@ -16,7 +16,7 @@
         @input="$emit('update:modelValue', $event.target.value)"
         @blur="$emit('blur')"
       />
-      <div v-if="errorMessage" class="base-input-error">
+      <div class="base-input-error" :class="{ 'is-visible': errorMessage }">
         {{ errorMessage }}
       </div>
     </div>
@@ -118,9 +118,15 @@ defineEmits(['update:modelValue', 'blur'])
   border-color: #ff6161;
 }
 .base-input-error {
-  margin-top: 8px;
+  min-height: 18px;
+  margin-top: 4px;
   font-size: 12px;
   color: #ff6161;
+  visibility: hidden;
+
+  &.is-visible {
+    visibility: visible;
+  }
 }
 .base-input-field:disabled,
 .base-input-field.disabled {
