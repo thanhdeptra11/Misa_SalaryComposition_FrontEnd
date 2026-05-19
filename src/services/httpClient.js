@@ -2,7 +2,7 @@ import axios from 'axios'
 // Tạo axios instance để gửi request 
 const httpClient = axios.create({
    // Đọc base URL từ file .env
-  baseURL: import.meta.env.VITE_API_BASE_URL_LOCAL,
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })

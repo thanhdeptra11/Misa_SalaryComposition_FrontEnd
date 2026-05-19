@@ -72,7 +72,7 @@ defineEmits(['update:modelValue', 'blur'])
 
 .base-input-wrapper {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   width: 100%;
 }
 

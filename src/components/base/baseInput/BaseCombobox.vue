@@ -255,7 +255,7 @@ onUnmounted(() => {
 
 .base-combobox {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   position: relative;
 }
 
