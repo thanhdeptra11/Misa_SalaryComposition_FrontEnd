@@ -210,7 +210,6 @@ import { PrismEditor } from 'vue-prism-editor'
 import 'vue-prism-editor/dist/prismeditor.min.css'
 
 import { GLOBAL_CONSTANTS } from '@/constants/globalConstants'
-import enumService from '@/services/enumService'
 import organizationService from '@/services/organizationService'
 import salaryCompositionService from '@/services/salaryCompositionService'
 import { t } from '@/utils/resourseReader'

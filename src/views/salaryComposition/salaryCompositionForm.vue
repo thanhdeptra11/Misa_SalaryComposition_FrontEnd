@@ -333,7 +333,6 @@ import BaseTabContent from '@/components/base/BaseTabContent.vue'
 // Services / utils
 // ========================
 import organizationService from '@/services/organizationService';
-import enumService from '@/services/enumService';
 import salaryCompositionService from '@/services/salaryCompositionService';
 import { EXCEL_FORMULA_SUGGESTIONS } from '@/constants/excelFormulaSuggestions'
 import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
