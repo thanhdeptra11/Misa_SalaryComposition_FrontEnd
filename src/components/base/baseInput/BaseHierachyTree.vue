@@ -11,46 +11,45 @@
       field-template="customField"
       content-template="content"
       :width="dropDownBoxWidth"
-      :drop-down-options="{ 
-        wrapperAttr: { class: 'tree-popup' } 
-      }" 
+      :drop-down-options="{
+        wrapperAttr: { class: 'tree-popup' },
+      }"
       @value-changed="syncTreeViewSelection"
     >
       <template #customField="{ data }">
-       <DxTextBox
-            class="hidden-dx-textbox"
-            :read-only="true"
-            :hover-state-enabled="false"
-            :focus-state-enabled="false"
-          />
-       <div v-if="displayTags.length === 0" class="misa-tree-placeholder">
-         {{ placeholder }}
-       </div>
-       <DxTagBox
-         v-else
-         class="misa-tree-tagbox"
-         :data-source="displayTags"
-         :value="displayTagIds"
-         display-expr="text"
-         value-expr="id"
-         :show-drop-down-button="false"
-         :open-on-field-click="false"
-         :search-enabled="false"
-         :max-displayed-tags="2"
-         :show-multi-tag-only="false"
-         :multiline="false"
-         tag-template="tagTemplate"
-         @multi-tag-preparing="onMultiTagPreparing"
-         @value-changed="onTagBoxValueChanged"
-       >
-        <template #tagTemplate="{ data }">
+        <DxTextBox
+          class="hidden-dx-textbox"
+          :read-only="true"
+          :hover-state-enabled="false"
+          :focus-state-enabled="false"
+        />
+        <div v-if="displayTags.length === 0" class="misa-tree-placeholder">
+          {{ placeholder }}
+        </div>
+        <DxTagBox
+          v-else
+          class="misa-tree-tagbox"
+          :data-source="displayTags"
+          :value="displayTagIds"
+          display-expr="text"
+          value-expr="id"
+          :show-drop-down-button="false"
+          :open-on-field-click="false"
+          :search-enabled="false"
+          :max-displayed-tags="2"
+          :show-multi-tag-only="false"
+          :multiline="false"
+          tag-template="tagTemplate"
+          @multi-tag-preparing="onMultiTagPreparing"
+          @value-changed="onTagBoxValueChanged"
+        >
+          <template #tagTemplate="{ data }">
             <div class="misa-tree-tag-content" :title="data.text">
               <span class="misa-tree-tag-text">{{ data.text }}</span>
               <div class="dx-tag-remove-button"></div>
             </div>
           </template>
-
-      </DxTagBox>
+        </DxTagBox>
       </template>
 
       <template #content="{ data }">
@@ -80,156 +79,157 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue';
-import { DxDropDownBox } from 'devextreme-vue/drop-down-box';
-import { DxTreeView } from 'devextreme-vue/tree-view';
-import { DxTextBox } from 'devextreme-vue/text-box';
-import { DxTagBox } from 'devextreme-vue/tag-box';
-import { GLOBAL_CONSTANTS } from '@/constants/globalConstants';
+import { ref, watch, computed } from 'vue'
+import { DxDropDownBox } from 'devextreme-vue/drop-down-box'
+import { DxTreeView } from 'devextreme-vue/tree-view'
+import { DxTextBox } from 'devextreme-vue/text-box'
+import { DxTagBox } from 'devextreme-vue/tag-box'
+import { GLOBAL_CONSTANTS } from '@/constants/globalConstants'
 
 const props = defineProps({
   modelValue: {
     type: Array,
-    default: () => []
+    default: () => [],
   },
   rootValue: {
     type: String,
-    default: GLOBAL_CONSTANTS.EMPTY_GUID
+    default: GLOBAL_CONSTANTS.EMPTY_GUID,
   },
   displayExpr: {
     type: String,
-    default: ''
+    default: '',
   },
   parentIdExpr: {
     type: String,
-    default: 'parentId'
+    default: 'parentId',
   },
   customDataSource: {
     type: Array,
-    required: true
+    required: true,
   },
   placeholder: {
     type: String,
-    default: ''
+    default: '',
   },
   dropDownBoxWidth: {
     type: Number,
-    default: '250px'
-  }
-});
+    default: '250px',
+  },
+})
 
-const emit = defineEmits(['update:modelValue']);
-// Biến lưu các tree item được chọn
-const treeBoxValue = ref([...props.modelValue]);
-// Biến lưu trạng thái mở/đóng của dropdown
-const isTreeBoxOpened = ref(false);
-// Ref cho treeview
-const treeViewRef = ref(null);
+const emit = defineEmits(['update:modelValue'])
+const treeBoxValue = ref([...props.modelValue])
+const isTreeBoxOpened = ref(false)
+const treeViewRef = ref(null)
+const isTreeExpanded = ref(false)
 
-// Watch khi modelValue thay đổi
-watch(() => props.modelValue, (newVal) => {
-  // Nếu giá trị mới và giá trị hiện tại khác nhau
-  if (JSON.stringify(newVal) !== JSON.stringify(treeBoxValue.value)) {
-    treeBoxValue.value = [...newVal];
-  }
-});
+// Summary: Đồng bộ giá trị từ v-model bên ngoài (Cha truyền vào) xuống component con
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    if (JSON.stringify(newVal) !== JSON.stringify(treeBoxValue.value)) {
+      treeBoxValue.value = [...newVal]
+    }
+  },
+)
 
-// Watch khi treeBoxValue thay đổi
+// Summary: Phát sự kiện cập nhật v-model ra bên ngoài khi danh sách chọn thay đổi
 watch(treeBoxValue, (newVal) => {
-  emit('update:modelValue', newVal);
-});
+  emit('update:modelValue', newVal)
+})
 
-// Đồng bộ treeview với treeBoxValue
+// Summary: Reset trạng thái expand khi data nguồn thay đổi
+watch(
+  () => props.customDataSource,
+  () => {
+    isTreeExpanded.value = false
+  },
+  { deep: true },
+)
+
+// Summary: Đồng bộ UI TreeView (tích checkbox) với danh sách ID đang chọn (treeBoxValue).
+// Params: None
+// Return: void
 const syncTreeViewSelection = () => {
-  const treeView = treeViewRef.value?.instance;
-  if (!treeView) return;
+  const treeView = treeViewRef.value?.instance
+  if (!treeView) return
 
   if (!treeBoxValue.value || treeBoxValue.value.length === 0) {
-    treeView.unselectAll();
+    treeView.unselectAll()
   } else {
-    treeBoxValue.value.forEach((key) => {
-      treeView.selectItem(key);
-    });
+    treeBoxValue.value.forEach((key) => treeView.selectItem(key))
   }
-};
+}
 
-const isTreeExpanded = ref(false);
-
-watch(() => props.customDataSource, () => {
-  isTreeExpanded.value = false;
-}, { deep: true });
-
-// TreeView đã load xong nội dung, tự động expand tất cả các node
+// Summary: Xử lý sự kiện khi TreeView load xong giao diện. Tự động mở rộng (expand) tất cả các node.
+// Params: e (Object) - Event object từ DevExtreme
+// Return: void
 const treeViewContentReady = (e) => {
-  if (!e.component) return;
-  
+  if (!e.component) return
   if (!isTreeExpanded.value) {
-    const rootNodes = e.component.getNodes();
-    rootNodes.forEach(node => {
-      e.component.expandItem(node.key);
-    });
-    isTreeExpanded.value = true;
+    e.component.getNodes().forEach((node) => e.component.expandItem(node.key))
+    isTreeExpanded.value = true
   }
-  
-  syncTreeViewSelection();
-};
+  syncTreeViewSelection()
+}
+
+// Summary: Cập nhật lại mảng treeBoxValue khi người dùng tick/bỏ tick trực tiếp trên TreeView.
+// Params: e (Object) - Event object từ DevExtreme
+// Return: void
+const treeViewItemSelectionChanged = (e) => {
+  treeBoxValue.value = e.component.getSelectedNodes().map((node) => node.key)
+}
 
 /* ---------------------------------------------------
    LOGIC CHO TAGBOX (HIỂN THỊ ITEM ĐÃ CHỌN THÀNH TAG)
    --------------------------------------------------- */
+
+// Summary: Tính toán danh sách các tag hiển thị lên ô input. Chỉ hiển thị node nếu node cha của nó KHÔNG ĐƯỢC CHỌN (gom nhóm tối ưu).
+// Params: None
+// Return: Array<Object> - Mảng gồm {id, text} của các tag hợp lệ
 const displayTags = computed(() => {
-  if (!treeBoxValue.value || treeBoxValue.value.length === 0) return [];
-  // Tất cả id đang chọn
-  const selectedSet = new Set(treeBoxValue.value);
-  const result = [];
-  
-  for (const id of treeBoxValue.value) {
-    const item = props.customDataSource.find(x => x.id === id);
+  if (!treeBoxValue.value?.length) return []
+
+  const selectedSet = new Set(treeBoxValue.value)
+  return treeBoxValue.value.reduce((acc, id) => {
+    const item = props.customDataSource.find((x) => x.id === id)
     if (item) {
-      // Lấy tên của parentId
-      // Chỉ hiểu thị nếu parentId === rootId hoặc parentId không tồn tại trong selectedSet 
-      // (tức là node cha của nó không được chọn)
-      const parentId = item[props.parentIdExpr]; 
+      const parentId = item[props.parentIdExpr]
+      // Nếu không có parent, hoặc parent là root, hoặc parent CHƯA được chọn -> Hiển thị nó làm đại diện
       if (!parentId || parentId === props.rootValue || !selectedSet.has(parentId)) {
-        result.push({ id: item.id, text: item[props.displayExpr] });
+        acc.push({ id: item.id, text: item[props.displayExpr] })
       }
     }
-  }
-  return result;
-});
-// Lấy mảng từ dissPlayTags truyền vào TagBox
-const displayTagIds = computed(() => {
-  return displayTags.value.map(tag => tag.id);
-});
-// Xử lý khi remove item trong TagBox
-const removeSelectedItem = (id) => {
-  const treeView = treeViewRef.value?.instance;
-  if (treeView) {
-    treeView.unselectItem(id); // Của sẵn DevExtreme 
-  } else {
-    // Lấy những phần tử khác với id truyền vào
-    treeBoxValue.value = treeBoxValue.value.filter(val => val !== id);
-  }
-};
-// Bắt sự kiện khi tag bị xóa
+    return acc
+  }, [])
+})
+
+// Summary: Lấy danh sách ID để binding vào ô TagBox
+const displayTagIds = computed(() => displayTags.value.map((tag) => tag.id))
+
+// Summary: Xử lý sự kiện khi người dùng bấm nút "X" để xóa tag trên TagBox. Nó sẽ tìm và unselect trên cây, hoặc tự động xóa khỏi mảng nếu cây chưa render.
+// Params: e (Object) - Event từ DevExtreme TagBox
+// Return: void
 const onTagBoxValueChanged = (e) => {
-  // Lấy ra các tagbox bị remove
-  const removedIds = e.previousValue.filter(id => !e.value.includes(id));
-  // Loại bỏ item đó ra khỏi cây
-  removedIds.forEach(id => removeSelectedItem(id));
-};
-// Bắt sự kiện khi check uncheck item trong treeview
-const treeViewItemSelectionChanged = (e) => {
-  const treeView = e.component;
-  const selectedNodes = treeView.getSelectedNodes();
-  
-  // Chỉ lấy ID của các nodes được check
-  treeBoxValue.value = selectedNodes.map(node => node.key);
-};
-// Lấy số lượng item nếu nhiều hơn 2 item
+  // Lọc ra danh sách id vừa bị người dùng xóa
+  const removedIds = e.previousValue.filter((id) => !e.value.includes(id))
+  const treeView = treeViewRef.value?.instance
+
+  removedIds.forEach((id) => {
+    if (treeView) {
+      treeView.unselectItem(id) // Bỏ tích trên cây
+    } else {
+      treeBoxValue.value = treeBoxValue.value.filter((val) => val !== id) // Xóa trực tiếp khỏi mảng
+    }
+  })
+}
+
+// Summary: Định dạng text hiển thị khi số lượng tag vượt quá mức cho phép (VD: +3)
+// Params: e (Object) - Event từ DevExtreme
+// Return: void
 const onMultiTagPreparing = (e) => {
-  e.text = `+${e.selectedItems.length}`;
-};
+  e.text = `+${e.selectedItems.length}`
+}
 </script>
 <!-- Bỏ scoped đoạn này vì Treeview bị đẩy ra khỏi phạm vi body -->
 <style lang="scss">
@@ -246,10 +246,10 @@ const onMultiTagPreparing = (e) => {
   height: 36px;
   border: 1px solid #dddde4;
 }
-.dx-treeview-expander-icon-stub{
-  display: none;  
+.dx-treeview-expander-icon-stub {
+  display: none;
 }
-.tree-popup .dx-overlay-content.dx-state-focused{
+.tree-popup .dx-overlay-content.dx-state-focused {
   border: transparent;
 }
 
@@ -294,7 +294,10 @@ const onMultiTagPreparing = (e) => {
   background-color: $primary-background !important;
 }
 
-.custom-misa-treeview .dx-treeview-node.dx-state-selected > .dx-treeview-item .dx-treeview-item-content,
+.custom-misa-treeview
+  .dx-treeview-node.dx-state-selected
+  > .dx-treeview-item
+  .dx-treeview-item-content,
 .custom-misa-treeview .dx-treeview-item:has(.dx-checkbox-checked) .dx-treeview-item-content {
   color: $primary-green !important;
 }
@@ -312,13 +315,15 @@ const onMultiTagPreparing = (e) => {
   width: 20px !important;
   height: 20px !important;
   border: none !important;
-  background: url('https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg') -240px 0 no-repeat !important;
+  background: url('https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg') -240px
+    0 no-repeat !important;
 }
 
 /* Trạng thái đã tick (icon_square_check_primary) */
 .custom-misa-treeview .dx-checkbox-checked .dx-checkbox-icon,
 .custom-misa-treeview .dx-checkbox-indeterminate .dx-checkbox-icon {
-  background: url('https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg') -260px 0 no-repeat !important;
+  background: url('https://amisplatform.misacdn.net/apps/payroll/static/img/Icon.c487640.svg') -260px
+    0 no-repeat !important;
 }
 /* ---------------------------------------------------
    CUSTOM TOGGLE ICON (MỞ RỘNG / THU GỌN)
@@ -332,7 +337,7 @@ const onMultiTagPreparing = (e) => {
 
 /* Icon mặc định khi thu gọn (dấu cộng - icon_toggle_plus) */
 .custom-misa-treeview .dx-treeview-toggle-item-visibility::before {
-  content: "" !important;
+  content: '' !important;
   display: block !important;
   width: 20px !important;
   height: 20px !important;
@@ -344,27 +349,27 @@ const onMultiTagPreparing = (e) => {
 }
 
 /* Icon khi đã mở rộng (dấu trừ - icon_toggle_minus) */
-.custom-misa-treeview .dx-treeview-toggle-item-visibility.dx-treeview-toggle-item-visibility-opened::before {
+.custom-misa-treeview
+  .dx-treeview-toggle-item-visibility.dx-treeview-toggle-item-visibility-opened::before {
   -webkit-mask-position: -100px -40px !important; /* Dự đoán tọa độ của dấu trừ, bạn có thể chỉnh lại cho đúng */
   transform: none !important;
 }
 // Căn vị trí các phần tử trong container Tagbox
-.dx-selectbox-container{
+.dx-selectbox-container {
   position: relative;
   display: flex;
   align-items: center;
 }
-.dx-dropdowneditor-input-wrapper{
+.dx-dropdowneditor-input-wrapper {
   display: flex;
   align-items: center;
 }
 // Styles cho tagBox
-.dx-tag{
+.dx-tag {
   padding: 5px 23px 5px 5px !important;
   margin: 0px !important;
-
 }
-.dx-texteditor{
+.dx-texteditor {
   align-self: center;
 }
 </style>
@@ -429,11 +434,9 @@ const onMultiTagPreparing = (e) => {
   pointer-events: none; /* Xuyên click xuống DropDownBox */
 }
 
-
-
 /* Ghi đè triệt để icon mặc định của DevExtreme (vì DevExtreme dùng font chữ) */
 :deep(.dx-dropdowneditor-icon::before) {
-  content: none !important; 
+  content: none !important;
 }
 
 /* Áp dụng SVG Mask trực tiếp, dùng !important để tránh DevExtreme đè lại khi hover */
@@ -511,7 +514,7 @@ const onMultiTagPreparing = (e) => {
 
 /* Sử dụng .icon_close_small cho pseudo-element thay vì icon mặc định */
 :deep(.misa-tree-tagbox .dx-tag-remove-button::before) {
-  content: "" !important; /* Ghi đè chữ "x" mặc định */
+  content: '' !important; /* Ghi đè chữ "x" mặc định */
   position: absolute;
   left: -4px;
   top: 8px;

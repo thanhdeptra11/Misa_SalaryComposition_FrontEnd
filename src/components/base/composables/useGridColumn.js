@@ -1,19 +1,6 @@
-/**
- * useGridColumns - Composable quản lý cấu hình cột của grid (bảng dữ liệu)
- *
- * @param {Array} defaultColumns - Danh sách cột mặc định 
- * @param {Object} options - Tùy chọn cấu hình
- * @param {string|number} options.userId  - ID của user đang đăng nhập
- * @param {string} options.gridId  - ID định danh grid cụ thể (mỗi grid một ID)
- *
- * @returns {Object}
- *   - columns {Ref<Array>} Danh sách cột hiện tại (đã merge config)
- *   - visibleColumns {ComputedRef} Chỉ các cột đang visible, đã sort theo order
- *   - isLoadingColumnConfig {Ref<boolean>} Trạng thái đang tải config từ server
- *   - loadColumnConfig {Function} Tải config từ server và apply vào columns
- *   - saveColumns {Function} Lưu cấu hình cột mới lên server
- *   - resetColumns {Function} Xóa config đã lưu, về lại mặc định
- */
+// Summary: Composable quản lý trạng thái, tải và lưu cấu hình ẩn/hiện, vị trí các cột của bảng (Grid).
+// Params: defaultColumns (Array) - Cấu hình gốc, options (Object) - userId, gridId.
+// Return: Object chứa state và các hàm xử lý cấu hình cột (loadColumnConfig, saveColumns, resetColumns, vv.)
 
 
 import { computed, ref } from 'vue'
@@ -24,9 +11,14 @@ const GRID_CONFIG_STATE = {
   UPDATE: 2,
   DELETE: 3
 }
-// columns: reactive list cột đang được dùng trên UI (clone từ defaultColumns để không mutate prop gốc)
+// Summary: Tạo bản sao sâu (clone) mảng cột để tránh thay đổi trực tiếp cấu hình gốc.
+// Params: columns (Array) - Mảng cột cần clone.
+// Return: Array - Mảng cột mới đã được clone.
 const cloneColumns = (columns) => columns.map(column => ({ ...column }))
 
+// Summary: Lấy mảng dữ liệu cấu hình từ response của API.
+// Params: response (Object) - Dữ liệu trả về từ server.
+// Return: Array - Mảng cấu hình cột.
 const getRowsFromResponse = (response) => {
   if (Array.isArray(response?.data)) {
     return response.data
@@ -52,11 +44,9 @@ export function useGridColumns(defaultColumns, options) {
       .filter(column => column.visible !== false) // Loại bỏ cột bị ẩn
       .sort((a, b) => a.order - b.order) // Sắp xếp theo thứ tự
   )
-/*
-- normalizeDefaultColumns
-  * Tạo một bản sao của defaultColumns (để không mutate prop)
-  * Với mỗi column, set giá trị mặc định nếu chưa có
-*/ 
+  // Summary: Bổ sung các thuộc tính mặc định (visible, pinned, order...) cho cấu hình gốc.
+  // Params: None
+  // Return: Array - Mảng cấu hình gốc đã chuẩn hóa.
   const normalizeDefaultColumns = () =>
     defaultColumns.map((column, index) => ({
       ...column,
@@ -67,6 +57,9 @@ export function useGridColumns(defaultColumns, options) {
       width: column.width ?? null
     }))
 
+  // Summary: Kết hợp cấu hình lấy từ server với cấu hình gốc, ưu tiên dữ liệu từ server.
+  // Params: configs (Array) - Cấu hình cột lưu trên server.
+  // Return: Array - Mảng cột sau khi gộp và sắp xếp theo thứ tự.
   const mergeConfigWithDefaultColumns = (configs) => {
     const configMap = new Map(
       configs.map(config => [config.columnField, config])
@@ -87,12 +80,9 @@ export function useGridColumns(defaultColumns, options) {
       })
       .sort((a, b) => a.order - b.order)
   }
-/**
-   * loadColumnConfig
-   * Tải cấu hình cột từ server và apply vào state
-   * Được gọi khi component mount hoặc cần refresh config
-   * @returns {Promise<void>}
-   */
+  // Summary: Tải cấu hình cột từ server, kết hợp với mặc định và áp dụng vào giao diện.
+  // Params: None
+  // Return: Promise<void>
   const loadColumnConfig = async () => {
     try {
       isLoadingColumnConfig.value = true
@@ -109,13 +99,9 @@ export function useGridColumns(defaultColumns, options) {
       isLoadingColumnConfig.value = false // Luôn tắt loading dù thành công hay thất bại
     }
   }
-  /**
-   * buildSavePayload
-   * Xây dựng payload để gửi lên server khi lưu cấu hình cột
-   * So sánh với serverConfigs để quyết định INSERT hay UPDATE từng cột
-   * @param {Array} draftColumns - Mảng cột người dùng vừa chỉnh sửa (thứ tự mới, visibility mới, ...)
-   * @returns {Array} Mảng payload với state INSERT/UPDATE cho từng cột
-   */
+  // Summary: Xây dựng dữ liệu gửi lên server, đối chiếu cấu hình cũ để gán trạng thái INSERT hoặc UPDATE.
+  // Params: draftColumns (Array) - Mảng cột vừa được người dùng chỉnh sửa.
+  // Return: Array - Mảng payload.
   const buildSavePayload = (draftColumns) => {
     // Map để kiểm tra cột nào đã có config trên server
     const existingConfigMap = new Map(
@@ -151,12 +137,9 @@ export function useGridColumns(defaultColumns, options) {
       }
     })
   }
-/**
-   * saveColumns
-   * Lưu cấu hình cột mới lên server, rồi reload lại config
-   * @param {Array} draftColumns - Mảng cột với trạng thái mới (sau khi user kéo thả, ẩn/hiện, ...)
-   * @returns {Promise<void>}
-   */
+  // Summary: Gửi dữ liệu cấu hình mới lên server và gọi hàm load lại cấu hình.
+  // Params: draftColumns (Array) - Mảng cột vừa thay đổi.
+  // Return: Promise<void>
   const saveColumns = async (draftColumns) => {
     const normalizedColumns = draftColumns.map((column, index) => ({
       ...column,
@@ -170,11 +153,9 @@ export function useGridColumns(defaultColumns, options) {
     columns.value = normalizedColumns
     await loadColumnConfig()
   }
-/**
-   * resetColumns
-   * Xóa toàn bộ config đã lưu trên server, đưa cột về trạng thái mặc định
-   * @returns {Promise<void>}
-   */
+  // Summary: Xóa toàn bộ cấu hình đã lưu trên server bằng state DELETE, đưa bảng về trạng thái mặc định.
+  // Params: None
+  // Return: Promise<void>
   const resetColumns = async () => {
     // Đánh dấu toàn bộ config hiện có là DELETE
     if (serverConfigs.value.length > 0) {
