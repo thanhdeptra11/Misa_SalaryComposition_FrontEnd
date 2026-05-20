@@ -10,7 +10,7 @@
     <template #header-actions>
       <div class="buttons_wrapper">
         <BaseButton variant="primary" buttonText="Hủy bỏ" @click="handleCancelForm" />
-        <BaseButton variant="primary" buttonText="Lưu và thêm" />
+        <BaseButton @click="handleSaveNotBack" variant="primary" buttonText="Lưu và thêm" />
         <BaseButton @click="handleSave" variant="secondary" buttonText="Lưu" width="80px" />
       </div>
     </template>
@@ -45,12 +45,17 @@
       </div>
       <!-- Input chọn đơn vị áp dụng -->
       <div class="composition_input">
-        <div class="label_container"><b>Đơn vị áp dụng</b></div>
         <BaseHierachyTree
           v-model="compositionOrganization"
+          label="Đơn vị áp dụng"
+          :required="true"
+          labelWidth="188px"
           :custom-data-source="unitOptions"
           display-expr="organizationName"
           :dropDownBoxWidth="676"
+          :error-message="errors.compositionOrganization"
+          @blur="validateField('compositionOrganization')"
+          @update:modelValue="handleFieldChange('compositionOrganization')"
         />
       </div>
       <!-- Input nhập loại thành phần -->
@@ -398,6 +403,7 @@ const validationRules = {
   compositionCode: [required('fields.salaryComposition.compositionCode')],
   compositionType: [required('fields.salaryComposition.compositionType')],
   compositionProperty: [required('fields.salaryComposition.compositionProperty')],
+  compositionOrganization: [required('Đơn vị áp dụng')],
 }
 
 const formValidateValues = {
@@ -405,6 +411,7 @@ const formValidateValues = {
   compositionCode,
   compositionType,
   compositionProperty,
+  compositionOrganization,
 }
 
 // ========================
@@ -704,7 +711,17 @@ const buildPayload = () => {
     ...(isEditMode.value ? { id: salaryCompositionId.value } : {}),
   })
 }
+const handleSaveNotBack = async () => {
+  // Validate fail thì không gọi API
+  if (!validateForm()) return
 
+  const isSaved = await handleSave()
+
+  if (isSaved) {
+    // Nếu lưu thành công, reset form để thêm mới tiếp
+    bindFormData(null)
+  }
+}
 const handleSave = async () => {
   // Validate fail thì không gọi API
   if (!validateForm()) return false
@@ -897,8 +914,7 @@ onMounted(() => {
 <style lang="scss" scoped>
 .composition_input {
   display: flex;
-  align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 30px;
 
   .place_holder {
     display: flex;

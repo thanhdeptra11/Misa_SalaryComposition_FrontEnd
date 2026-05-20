@@ -52,7 +52,7 @@
           </ul>
         </Transition>
       </div>
-      <div class="base-combobox-error" :class="{ 'is-visible': errorMessage }">
+      <div v-if="errorMessage" class="base-combobox-error is-visible">
         {{ errorMessage }}
       </div>
     </div>

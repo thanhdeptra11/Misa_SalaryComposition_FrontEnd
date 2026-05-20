@@ -39,6 +39,7 @@
     <template #selection-actions>
       <div class="bulk_actions">
         <BaseButton
+          v-if="showStopTrackingBtn"
           variant="outline-color"
           iconClass="icon_minus_yellow"
           buttonText="Ngừng theo dõi"
@@ -46,6 +47,7 @@
           @click="$emit('bulk-status-click', 0)"
         />
         <BaseButton
+          v-if="showStartTrackingBtn"
           variant="outline-color"
           iconClass="icon_check_green"
           buttonText="Đang theo dõi"
@@ -65,16 +67,27 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import GridDataToolbar from '@/components/base/baseGridData/GridDataToolbar.vue'
 import BaseButton from '@/components/base/baseButton/BaseButton.vue'
+import { isTracking } from '../utils/salaryCompositionList.helpers.js'
 // Cổng vào
-defineProps({
+const props = defineProps({
   searchResults: { type: Array, default: () => [] }, //Cha truyền mảng kết quả tìm kiếm xuống
   selectedCount: { type: Number, default: 0 }, //Cha truyền số lượng row đã chọn xuống
+  selectedRows: { type: Array, default: () => [] }, //Cha truyền danh sách row đã chọn xuống để hiển thị số lượng trong bulk action
   status: { type: [Number, String], default: null }, // Trạng thái đang được chọn filter
   units: { type: Array, default: () => [] }, // Các phòng ban đang được chọn filter
   statusOptions: { type: Array, default: () => [] }, // Các tùy chọn trạng thái để hiển thị trong dropdown filter
   unitOptions: { type: Array, default: () => [] }, // Các tùy chọn phòng ban để hiển thị trong dropdown filter
+})
+// 1. Chỉ hiện nút "Ngừng theo dõi" khi có ít nhất 1 dòng đang "Đang theo dõi"
+const showStopTrackingBtn = computed(() => {
+  return props.selectedRows.some((row) => isTracking(row.status))
+})
+// 2. Chỉ hiện nút "Đang theo dõi" khi có ít nhất 1 dòng đang "Ngừng theo dõi"
+const showStartTrackingBtn = computed(() => {
+  return props.selectedRows.some((row) => !isTracking(row.status))
 })
 // Cổng ra
 defineEmits([

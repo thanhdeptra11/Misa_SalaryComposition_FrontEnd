@@ -48,6 +48,7 @@
           v-if="showFilterBtn"
           variant="icon-only"
           class="icon icon_filter"
+          @click="$emit('openFilter')"
         />
         <BaseButton
           id="btnSettingColumn"
@@ -116,6 +117,7 @@ const emit = defineEmits([
   'update:unitFilterValue',
   'clearSelection',
   'openColumnSetting',
+  'openFilter',
 ])
 const selectedItem = ref(
   props.selectedItem || (props.dropdownOptions && props.dropdownOptions[0]?.value) || '',

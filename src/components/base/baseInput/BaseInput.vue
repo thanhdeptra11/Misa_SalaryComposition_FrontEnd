@@ -16,7 +16,7 @@
         @input="$emit('update:modelValue', $event.target.value)"
         @blur="$emit('blur')"
       />
-      <div class="base-input-error" :class="{ 'is-visible': errorMessage }">
+      <div v-if="errorMessage" class="base-input-error is-visible">
         {{ errorMessage }}
       </div>
     </div>
